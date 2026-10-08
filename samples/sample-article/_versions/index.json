@@ -1,0 +1,52 @@
+{
+  "schema": 1,
+  "versions": [
+    {
+      "n": 1,
+      "token": "34f0f776bbf72b14",
+      "at": "2026-10-08T09:31:46+00:00",
+      "who": "the pipeline",
+      "what": "Article written",
+      "detail": "keywords, brief, research, writing, pictures",
+      "kind": "pipeline",
+      "files": {
+        "article.md": "e3f05c3dc905639c8fbd83be263b21baa71dd81e95dba0d82778bf639b79fa37",
+        "assets/chart_1.png": "a5b623a932bc80bc921782d9f91954e5d1cc5257bbe8e99a86f3ab1cde9b8867",
+        "assets/cover.png": "3c40dbe70ed6befd239ba87aace0c22ea00cb4a143f41c59a86c6c61a89946d4",
+        "assets/infographic_1.png": "dc8feced9c84ffd587dd54b0b6fd94779e1f5f1a52cdf9e49c5b055dbd92bcea"
+      }
+    },
+    {
+      "n": 2,
+      "token": "7ea4b3f956996033",
+      "at": "2026-10-08T09:31:46+00:00",
+      "who": "the review r1",
+      "what": "The sentence 'Google may rewrite the snippet anyway, but a careful description is what it shows when the page and the tag agree.' repeats the point of the first",
+      "detail": "r1-1",
+      "kind": "review",
+      "files": {
+        "article.md": "e11ef5132ef4fcba3c33b67c42efe5cb7039f07f18dc75d25038077ac2c9d31b",
+        "assets/chart_1.png": "a5b623a932bc80bc921782d9f91954e5d1cc5257bbe8e99a86f3ab1cde9b8867",
+        "assets/cover.png": "3c40dbe70ed6befd239ba87aace0c22ea00cb4a143f41c59a86c6c61a89946d4",
+        "assets/infographic_1.png": "dc8feced9c84ffd587dd54b0b6fd94779e1f5f1a52cdf9e49c5b055dbd92bcea"
+      },
+      "group": "c1"
+    },
+    {
+      "n": 3,
+      "token": "2a510dc82cfd3ff2",
+      "at": "2026-10-08T09:31:46+00:00",
+      "who": "the review r1",
+      "what": "The section 'Patterns that make a description worth clicking' does not use the phrase 'meta description examples'. Reword its first sentence to carry it.",
+      "detail": "r1-2",
+      "kind": "review",
+      "files": {
+        "article.md": "f7116eae5b37192883265f006e6546faa6cb17afa3493614b6c4085510b4389b",
+        "assets/chart_1.png": "a5b623a932bc80bc921782d9f91954e5d1cc5257bbe8e99a86f3ab1cde9b8867",
+        "assets/cover.png": "3c40dbe70ed6befd239ba87aace0c22ea00cb4a143f41c59a86c6c61a89946d4",
+        "assets/infographic_1.png": "dc8feced9c84ffd587dd54b0b6fd94779e1f5f1a52cdf9e49c5b055dbd92bcea"
+      },
+      "group": "c2"
+    }
+  ]
+}

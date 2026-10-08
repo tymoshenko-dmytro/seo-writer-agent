@@ -1,0 +1,96 @@
+{% extends "base.html" %}
+{% import "_ui.html" as ui %}
+{#- Costs: the period and the filters, the spend per day stacked by
+    part, the total as one big number, the average article, by service and by article, every
+    operation (in dollars, or the units behind them), Export CSV. Prices are in Configure. -#}
+{% set page_title = "Costs" %}
+{% block content %}
+{% call ui.page_header("Costs") %}
+  {% call ui.menu() %}
+    <a class="menu-item" href="/costs.csv{{ qs() }}">{{ icon("file-down") }}Export CSV</a>
+    <a class="menu-item" href="/settings/prices">{{ icon("tag") }}Prices</a>
+  {% endcall %}
+{% endcall %}
+
+{% call ui.filters([("30", "Last 30 days", qs(p=none)), ("month", "This month", qs(p="month")), ("all", "All time", qs(p="all"))], period, label="Period") %}
+  <form method="get" class="filter-selects">
+    {% for k in ("p", "units") %}{% if args.get(k) %}<input type="hidden" name="{{ k }}" value="{{ args[k] }}">{% endif %}{% endfor %}
+    <label class="visually-hidden" for="f-article">The article</label>
+    <select class="select" id="f-article" name="article" data-autosubmit-select>
+      <option value="">Every article</option>{% for a in arts %}<option value="{{ a.slug }}" {{ 'selected' if args.get('article') == a.slug }}>{{ a.title|truncate(48) }}</option>{% endfor %}
+    </select>
+    <label class="visually-hidden" for="f-service">The service</label>
+    <select class="select" id="f-service" name="service" data-autosubmit-select>
+      <option value="">Every service</option>{% for s in service_names %}<option value="{{ s }}" {{ 'selected' if args.get('service') == s }}>{{ provider_label.get(s, s) }}</option>{% endfor %}
+    </select>
+    <label class="visually-hidden" for="f-op">The operation</label>
+    <select class="select" id="f-op" name="op" data-autosubmit-select>
+      <option value="">Every operation</option>{% for o in op_names %}<option value="{{ o }}" {{ 'selected' if args.get('op') == o }}>{{ op_label.get(o, o) }}</option>{% endfor %}
+    </select>
+    <noscript>{{ ui.button("Show", "secondary", size="sm") }}</noscript>
+  </form>
+{% endcall %}
+
+<div class="stats">
+  <div class="stat"><span class="big-number">{{ total|usd }}</span><span class="stat-label">spent {{ {"30": "in the last 30 days", "month": "this month", "all": "since the first article"}[period] }}{% if estimated %} (part estimated){% endif %}</span></div>
+  <div class="stat"><span class="big-number">{{ average|usd if average is not none else "—" }}</span><span class="stat-label">an article on average, from the topic to its first review{% if left_out %} ({{ left_out }} left out: see Not known below){% endif %}</span></div>
+  <div class="stat"><span class="big-number">{{ articles_written }}</span><span class="stat-label">article{{ "s" if articles_written != 1 }} written · {{ operations }} operation{{ "s" if operations != 1 }} in all</span></div>
+</div>
+
+<section class="panel">
+  <div class="panel-head">
+    <h2 class="panel-title">{{ "Per month" if (end - start).days > 92 else "Per day" }}</h2>
+    <div class="legend panel-aside">{% for p, v in by_part %}<span><i class="s{{ loop.index0 }}"></i>{{ p }} {{ v|usd }}</span>{% endfor %}</div>
+  </div>
+  <div class="panel-body">{{ chart }}</div>
+</section>
+
+<div class="cost-grid">
+  <section class="panel">
+    <div class="panel-head"><h2 class="panel-title">By article</h2><span class="hint panel-aside">in this period</span></div>
+    {% if by_article %}
+    <table class="table">
+      <tbody>
+      {% for a in by_article %}
+        <tr data-href="/a/{{ a.slug }}?tab=history#costs">
+          <td><div class="cell-main"><a href="/a/{{ a.slug }}?tab=history#costs">{{ a.title }}</a></div></td>
+          <td class="bar-col"><div class="bar-cell"><div class="bar-track"><i style="width:{{ (a.cost / peak * 100)|round(1) }}%"></i></div></div></td>
+          <td class="num fit">{{ a.cost|usd }}</td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+    {% else %}<div class="panel-body"><p class="hint">Nothing spent in this period.</p></div>{% endif %}
+  </section>
+  <section class="panel">
+    <div class="panel-head"><h2 class="panel-title">By service</h2></div>
+    {% for key, s in services %}
+    <div class="panel-row is-wide"><div><span class="label">{{ s.label }}</span><span class="hint">{% for k, v in s.units|dictsort %}{{ "{:,.0f}".format(v) }} {{ k|replace("_", " ") }}{{ " · " if not loop.last }}{% endfor %}</span></div>
+      <span class="num">{{ s.cost|usd if s.cost else "—" }}{% if s.unpriced %} <span class="hint inline">· part has no price</span>{% endif %}</span></div>
+    {% else %}<div class="panel-body"><p class="hint">No service used in this period.</p></div>{% endfor %}
+    {% if any_unpriced %}<div class="panel-foot"><span class="hint">A service without a price is counted in its units only: <a href="/settings/prices">set one in Prices</a>.</span></div>{% endif %}
+  </section>
+</div>
+
+<section class="panel" id="operations">
+  <div class="panel-head"><h2 class="panel-title">Operations</h2>
+    <div class="panel-aside">{{ ui.toggle([("usd", "Dollars", qs(units=none) ~ "#operations"), ("units", "Units", qs(units="1") ~ "#operations")], "units" if units else "usd", label="Show") }}</div></div>
+  {% if ops %}
+  <table class="table table-list">
+    <thead><tr><th>When</th><th>Article</th><th>Operation</th><th class="num">{{ "Units" if units else "Cost" }}</th></tr></thead>
+    <tbody>
+    {% for o in ops %}
+      <tr><td class="hint fit">{{ o.started[:16].replace("T", " ") }}</td><td><a href="/a/{{ o.slug }}?tab=history#costs">{{ o.title|truncate(60) }}</a></td><td>{{ o.label }}{% if o.estimated %} <span class="hint inline">· estimated</span>{% endif %}</td>
+        <td class="num">{% if units %}<span class="hint">{% for k, v in o.units|dictsort %}{{ "{:,.0f}".format(v) }} {{ k|replace("_", " ") }}{{ " · " if not loop.last }}{% endfor %}</span>{% else %}{{ o.cost|usd }}{% if o.unpriced %} <span class="hint inline">+ unpriced</span>{% endif %}{% endif %}</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  {% if more %}<div class="panel-foot"><span class="hint">{{ more }} older operations: Export CSV has them all.</span></div>{% endif %}
+  {% else %}<div class="panel-body"><p class="hint">No operation in this period.</p></div>{% endif %}
+  {% if limits %}<div class="panel-foot"><span class="hint">Not known: {{ limits|join("; ") }}.</span></div>{% endif %}
+</section>
+{% endblock %}
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/articles.js', v=asset_v('js/articles.js')) }}" defer></script>
+<script>document.querySelectorAll('[data-autosubmit-select]').forEach(s => s.addEventListener('change', () => s.form.submit()));</script>
+{% endblock %}

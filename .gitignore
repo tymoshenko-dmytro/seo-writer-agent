@@ -1,0 +1,21 @@
+.venv/
+venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+.claude/
+.playwright-mcp/
+.DS_Store
+
+# secrets
+.env
+.env.*
+!.env.example
+
+# the articles and everything the Studio saves (settings, API keys, prompt edits, caches, the job
+# list, the session secret) live on the output volume, never in git: articles move between
+# installs with the Studio's export and import
+project/output/
+ui/jobs.json
+node_modules/
+.ruff_cache/

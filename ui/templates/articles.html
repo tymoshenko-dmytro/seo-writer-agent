@@ -1,0 +1,73 @@
+{% extends "base.html" %}
+{% import "_ui.html" as ui %}
+{#- The articles: New article and the "⋯" menu
+    (Import); four filters and a search; one row per article: the title, one muted line, the
+    three facts kept apart (the review, your review, WordPress) and the cost. One banner line
+    when something blocks work; the link index and the system's state are in Connections. -#}
+{% set page_title = "Articles" %}
+{% block banners %}
+{% if mem_limit %}{{ ui.banner("This install has " ~ mem_limit ~ " MB of memory: nothing that calls a model can run (it needs " ~ mem_needed ~ " MB).", "red", link="See Connections", href="/settings/keys", icon_name="circle-alert") }}
+{% elif not setup.done %}{{ ui.banner("The setup is not finished. " ~ (setup.reason or ((setup.untested|join(", ")) ~ " not tested yet.")), "gray", link="Finish the setup", href="/setup", icon_name="settings") }}{% endif %}
+{% endblock %}
+{% block content %}
+{% call ui.page_header("Articles") %}
+  {% call ui.menu() %}
+    <form method="post" action="/import" enctype="multipart/form-data" class="menu-form">
+      <label class="menu-item">{{ icon("file-up") }}Import an article (.zip)<input type="file" name="archive" accept=".zip" class="visually-hidden" data-autosubmit></label>
+      <noscript><button class="menu-item" type="submit">Import the chosen file</button></noscript>
+    </form>
+  {% endcall %}
+  {{ ui.button("New article", "primary", icon_name="plus", href="/new", disabled=not setup.can_write, reason="Finish the setup first." if not setup.can_write else None) }}
+{% endcall %}
+
+{% if total %}
+{% call ui.filters([("all", "All", "?filter=all", counts.all), ("look", "To look at", "?filter=look", counts.look), ("accepted", "Accepted", "?filter=accepted", counts.accepted), ("wp", "On WordPress", "?filter=wp", counts.wp)], filter, label="Articles") %}
+  <form class="search" method="get" role="search">
+    <input type="hidden" name="filter" value="{{ filter }}">
+    <label class="visually-hidden" for="list-search">Search the articles</label>{{ icon("search") }}
+    <input class="input" id="list-search" type="search" name="q" value="{{ q }}" placeholder="Search" autocomplete="off" data-filter-rows>
+  </form>
+{% endcall %}
+
+<div class="table-wrap">
+  <table class="table table-list"{% if following %} data-follow-jobs{% endif %}>
+    <thead><tr><th>Article</th><th class="fit">Review</th><th class="fit">Your review</th><th class="fit">WordPress</th><th class="num fit">Cost</th></tr></thead>
+    <tbody>
+    {% for r in rows %}
+      <tr data-href="/a/{{ r.slug }}" data-text="{{ (r.title ~ ' ' ~ r.slug)|lower }}"{% if not r.match %} hidden{% endif %}>
+        <td>
+          <div class="cell-main"><a href="/a/{{ r.slug }}">{{ r.title }}</a></div>
+          <div class="cell-sub">{{ r.slug }}{% if r.updated %} · {{ r.updated }}{% endif %}</div>
+          {% if r.running %}<div class="cell-progress progress" role="status"><div class="progress-text">{{ icon("loader-circle", cls="icon-spin") }}<span>{{ r.running[0] }} · <span data-job-step="{{ r.slug }}">{{ r.running[1] }}</span></span></div><div class="progress-track"></div></div>{% endif %}
+        </td>
+        <td class="fit" data-label="Review">
+          {% if r.failed %}{{ ui.status(r.failed[0], "red") }}<div class="cell-note" title="{{ r.failed[1] }}">{{ r.failed[1]|truncate(60) }}</div>
+          {% elif r.running and not r.review %}<span class="dash">—</span>
+          {% elif r.review %}{{ ui.status(r.review[0], r.review[1], quiet=r.review[2]) }}
+          {% else %}<span class="dash">—</span>{% endif %}
+        </td>
+        <td class="fit" data-label="Your review">{% if r.yours %}{{ ui.status(r.yours[0], r.yours[1], quiet=r.yours[2]) }}{% else %}<span class="dash">—</span>{% endif %}</td>
+        <td class="fit" data-label="WordPress">
+          {% if r.wp %}{{ ui.status(r.wp[0], r.wp[1], quiet=r.wp[2]) }}{% if r.wp_note %}<div class="cell-note">{{ r.wp_note }}</div>{% endif %}
+          {% else %}<span class="dash">—</span>{% endif %}
+        </td>
+        <td class="num fit">{{ r.cost|usd if r.cost is not none else "—" }}</td>
+      </tr>
+    {% endfor %}
+    {% set matched = rows|selectattr("match")|list|length %}
+      <tr class="list-empty" data-empty{% if matched %} hidden{% endif %}><td colspan="5"><p class="hint list-none" data-none-text="No article matches." data-empty-text="Nothing here: {{ {"look": "nothing waits for you", "accepted": "no article is accepted yet", "wp": "nothing is on WordPress yet"}.get(filter, "no article") }}.">{% if q and rows %}No article matches “{{ q }}”.{% else %}Nothing here: {{ {"look": "nothing waits for you", "accepted": "no article is accepted yet", "wp": "nothing is on WordPress yet"}.get(filter, "no article") }}.{% endif %}</p></td></tr>
+    </tbody>
+  </table>
+</div>
+{% else %}
+<div class="empty-state">
+  <div class="empty-icon">{{ icon("file-text", 20) }}</div>
+  <div class="empty-title">No articles yet</div>
+  <p class="empty-text">Give a topic: the Studio researches it, writes the article, reviews it and keeps what each step cost. The sample article shows what one looks like, with no key and no cost.</p>
+  <div class="btn-row">{% if setup.can_write %}{{ ui.button("New article", "primary", href="/new") }}{% endif %}<form method="post" action="/sample" class="inline">{{ ui.button("Open the sample article", "secondary", icon_name="book-open") }}</form></div>
+</div>
+{% endif %}
+{% endblock %}
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/articles.js', v=asset_v('js/articles.js')) }}" defer></script>
+{% endblock %}

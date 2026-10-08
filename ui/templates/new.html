@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+{% import "_ui.html" as ui %}
+{#- New article: a centred composer, the topic in one large
+    input, the options in a row, what it is likely to cost and take, Start the run; the last runs
+    under it. Nothing is sent to WordPress when a run ends. -#}
+{% set page_title = "New article" %}
+{% block content %}
+<div class="composer">
+  <h1 class="page-title">What should the article be about?</h1>
+  <form class="composer-box" method="post" action="/run">
+    <label class="visually-hidden" for="topic">The topic or the main keyword</label>
+    <input class="composer-input" id="topic" name="topic" placeholder="project management software" autofocus required autocomplete="off">
+    <div class="composer-options">
+      <label class="check"><input type="checkbox" name="use_ahrefs" checked> Keyword research</label>
+      <label class="visually-hidden" for="words">The length</label>
+      <select class="select" id="words" name="words">
+        <option value="">Length: auto</option>
+        {% for n in (1200, 1500, 2000, 2500, 3000) %}<option value="{{ n }}">{{ "{:,}".format(n) }} words</option>{% endfor %}
+      </select>
+      <label class="visually-hidden" for="processor">The research depth</label>
+      <select class="select" id="processor" name="processor">
+        {% for value, label in [("lite", "Research: lite"), ("core", "Research: core"), ("pro", "Research: pro"), ("ultra", "Research: ultra")] %}
+        <option value="{{ value }}" {{ 'selected' if value == default_processor }}>{{ label }}{{ ' (default)' if value == default_processor }}</option>
+        {% endfor %}
+      </select>
+      <label class="visually-hidden" for="country">The market</label>
+      <select class="select" id="country" name="country">
+        {% for code, name in countries %}<option value="{{ code }}" {{ 'selected' if code == country }}>Market: {{ name }}</option>{% endfor %}
+      </select>
+    </div>
+    <div class="composer-foot">
+      <span class="hint">{{ estimate }} Nothing is published when it ends.</span>
+      {{ ui.button("Start the run", "primary", disabled=not can_write, reason=reason if not can_write else None) }}
+    </div>
+  </form>
+
+  {% if runs %}
+  <section class="composer-runs">
+    <h2 class="group-title">Last runs</h2>
+    <div class="left-list">
+      {% for r in runs %}
+      <a class="left-item" href="/a/{{ r.slug }}">
+        <div><div class="cell-main">{{ r.title }}</div><div class="cell-sub">{{ r.slug }}{% if r.updated %} · {{ r.updated }}{% endif %}</div></div>
+        <div>{% if r.running %}{{ ui.status(r.running[0] ~ " · " ~ r.running[1], "blue", live=True) }}
+          {% elif r.failed %}{{ ui.status(r.failed[0], "red") }}
+          {% elif r.status == "article" %}{{ ui.status("Written", "green", quiet=True) }}
+          {% else %}{{ ui.status(r.status|capitalize, "gray", quiet=True) }}{% endif %}</div>
+      </a>
+      {% endfor %}
+    </div>
+  </section>
+  {% endif %}
+</div>
+{% endblock %}

@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+{% import "_ui.html" as ui %}
+{% set page_title = "Prompts" %}
+{% block content %}
+{{ ui.page_header("Prompts", sub="The instructions each agent works from. Open one to read or change it; the next run uses your version, and the original is always one click away.") }}
+<div class="table-wrap">
+  <table class="table table-list">
+    <tbody>
+    {% for r in rows %}
+      <tr data-href="/settings/prompts/{{ r.name }}">
+        <td><div class="cell-main"><a href="/settings/prompts/{{ r.name }}">{{ r.label }}</a></div><div class="cell-note">{{ r.help }}</div></td>
+        <td class="fit">{% if r.changed %}{{ ui.status("edited", "yellow") }}{% else %}{{ ui.status("Original", "gray", quiet=True) }}{% endif %}</td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</div>
+<p class="hint text-help">The steps that apply the review's changes and the deep-research call build their instructions from each finding and brief, so they follow the prompts above.</p>
+{% endblock %}
+{% block scripts %}<script src="{{ url_for('static', filename='js/articles.js', v=asset_v('js/articles.js')) }}" defer></script>{% endblock %}

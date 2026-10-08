@@ -1,0 +1,159 @@
+{#- Review: a queue of decisions. What needs the person,
+    in the article's order, each in its paragraph, with what its action will do; then what
+    changed; then what is closed. Proposals one by one or ticked together; every text item can be
+    written by the person. Without JavaScript, Edit and Not important open in the card itself. -#}
+{#- a card whose change is being made, or waits in the article's queue, leaves "Needs you" for
+    "Being made" until the job lands (2026-10-06: nothing on the card said it was asked for) -#}
+{% set working = items|selectattr("group", "equalto", "needs")|selectattr("working")|list %}
+{% set needs = items|selectattr("group", "equalto", "needs")|rejectattr("working")|list %}
+{% set half = needs|selectattr("type", "equalto", "half")|list %}
+{% set made = items|selectattr("group", "equalto", "made")|list %}
+{% set closed_items = items|selectattr("group", "equalto", "closed")|list %}
+{% set editing = request.args.get("edit") %}
+{% if not rv.review %}
+  {% if rv.state == "unreadable" %}
+    {{ ui.empty_state("circle-alert", "The review's record cannot be read", "The run record of this article does not parse; nothing here can be decided until it is repaired.") }}
+  {% else %}
+    <div class="empty-state">
+      <div class="empty-icon">{{ icon("list-checks", 20) }}</div>
+      <div class="empty-title">Not reviewed yet</div>
+      <p class="empty-text">{% if rail.review.migrated %}This article was reviewed in the old system; its checklist is kept as history.{% else %}No review has run on this article.{% endif %} A review reads the article, makes the safe changes itself and lists the rest here.</p>
+      {% if version %}<form method="post" action="{{ base }}/review-again"><input type="hidden" name="version" value="{{ version }}">{{ ui.button("Review it", "primary", cost=rail.review_cost, disabled=not keys.ai, reason=keys.ai_reason) }}</form>{% endif %}
+      {% if rail.review.migrated %}<p class="hint"><a href="?tab=history#old-checklist">The old checklist</a></p>{% endif %}
+    </div>
+  {% endif %}
+{% else %}
+  {% if rv.review.valid is sameas false %}
+  {{ ui.banner("The review " ~ rv.review.id ~ " did not work: " ~ rail.review.time.split(": ", 1)[-1] ~ ". What it lists is not a check of the article; Review again runs it once more.", "red", icon_name="circle-alert") }}
+  {% endif %}
+  <div class="review-summary">
+    <div>
+      <div class="review-count">{% if rv.review.valid is sameas false %}No result{% elif needs %}{{ needs|length }} need{{ "s" if needs|length == 1 }} you{% else %}Nothing needs you{% endif %}</div>
+      {% set made_v = made|map(attribute="v")|select|list %}
+      <div class="hint">The review {{ rv.review.id }} ({{ rail.review.time.split(", ", 1)[1] if ", " in rail.review.time else rail.review.time }}){% if rv.review.version_n %} read v{{ rv.review.version_n }} and{% endif %} made {{ made|length + half|length }} change{{ "s" if made|length + half|length != 1 }} by itself{% if made %}, one version each{% if made_v %} ({{ "v" ~ made_v|min if made_v|length == 1 else "v" ~ made_v|min ~ "–v" ~ made_v|max }}){% endif %}{% endif %}.{% if needs %} {{ needs|length }} thing{{ "s" if needs|length != 1 }} wait for your choice, in the article's order.{% endif %}</div>
+    </div>
+    {% if needs %}<a class="text-action" href="?tab=article&amp;marks=1">Show them in the article</a>{% endif %}
+  </div>
+
+  {% if working %}
+  <h2 class="group-title">Being made <span class="muted">{{ working|length }}</span></h2>
+  {% for it in working %}
+  <article class="ritem is-working" id="item-{{ it.n }}">
+    <span class="anchor" id="f-{{ it.id }}"></span>
+    <header class="ritem-head">
+      <span class="ritem-n">{{ it.n }}</span>
+      <span class="ritem-place">{{ it.section }}</span>
+      <span class="ritem-meta">{% if it.working == "running" %}{{ ui.status("Being made", "blue", live=True) }}{% else %}{{ ui.status("In the queue", "blue", quiet=True) }}{% endif %}</span>
+    </header>
+    <div class="ritem-body">
+      <p class="ritem-title">{{ it.title }}</p>
+      <p class="hint">{{ "The machine is making it now." if it.working == "running" else "It waits for the change before it." }} The page shows the result when it lands.</p>
+    </div>
+  </article>
+  {% endfor %}
+  {% endif %}
+
+  {% set proposals = needs|selectattr("type", "equalto", "proposal")|list %}
+  <h2 class="group-title">Needs you <span class="muted">{{ needs|length }}</span></h2>
+  {% if proposals|length > 1 and version %}
+  <form id="batch" method="post" action="{{ base }}/apply" class="batch-bar">
+    <input type="hidden" name="version" value="{{ version }}"><input type="hidden" name="review" value="{{ rv.review.id }}">
+    <label class="check"><input type="checkbox" data-select-all> All the proposals</label>
+    {{ ui.button("Apply the ticked proposals", "secondary", size="sm", attrs={"id": "apply-ticked", "data-cost": (costs.proposals or "")}) }}<span class="btn-reason" id="apply-nokey" hidden></span>
+    <span class="hint">or one by one below</span>
+  </form>
+  {% endif %}
+  {% for it in needs %}
+  {% if it.type == "half" %}
+  {% include "article/_change_card.html" %}
+  {% else %}
+  <article class="ritem" id="item-{{ it.n }}">
+    <span class="anchor" id="f-{{ it.id }}"></span>
+    <header class="ritem-head">
+      {% if it.type == "proposal" and not it.choices and proposals|length > 1 and version %}<input type="checkbox" form="batch" name="ids" value="{{ it.id }}" data-paid="{{ 1 if it.cost else 0 }}"{% if it.needs and not keys[it.needs] %} data-nokey="{{ keys[it.needs ~ '_reason'] }}"{% endif %} aria-label="Tick to apply with the others">{% endif %}
+      <span class="ritem-n">{{ it.n }}</span>
+      <span class="ritem-place">{{ it.section }}</span>
+      <span class="ritem-meta">{{ ui.severity(it.severity) }}{% if it.kind %}<span>{{ it.kind }}</span>{% endif %}</span>
+    </header>
+    <div class="ritem-body">
+      <p class="ritem-title">{{ it.title }}</p>
+      {% for t in it.also %}<p class="hint ritem-also">Also: {{ t }}</p>{% endfor %}
+      <p class="ritem-why">{{ it.why[0]|upper ~ it.why[1:] if it.why else "" }}</p>
+      {% if it.picture %}
+        <figure class="ritem-pic"><button type="button" class="pic-zoom" data-zoom="{{ base }}/{{ it.picture }}" aria-label="Look at it large"><img src="{{ base }}/{{ it.picture }}" alt="" loading="lazy"></button><figcaption><span class="id">{{ it.picture }}</span></figcaption></figure>
+      {% elif it.context %}
+        <div class="ritem-context prose" data-context>{{ it.context }}</div>
+      {% elif it.on and it.on.heading %}
+        <p class="hint">The section “{{ it.on.heading }}”{% if it.phrase %}; the phrase “{{ it.phrase }}”{% endif %}.</p>
+      {% elif it.target and it.target != "(no target)" %}
+        <p class="hint">{{ it.target }}</p>
+      {% endif %}
+      {% if it.will %}<p class="hint ritem-will">{{ it.will }}</p>{% endif %}
+      {% if it.edit_md and version %}{% with item=it, finding=it.id %}{% include "article/_paragraph_form.html" %}{% endwith %}{% endif %}
+    </div>
+    {% if version and editing != it.id %}
+    <footer class="ritem-foot">
+      {% if it.choices %}
+        {#- the reads asked different things of this picture: each is a button, as on Pictures -#}
+        {% for c in it.choices %}
+        <form method="post" action="{{ base }}/pictures/{{ 'remove' if c.action == 'remove_picture' else 'redraw' }}" class="inline">
+          <input type="hidden" name="asset" value="{{ it.picture }}"><input type="hidden" name="version" value="{{ version }}">
+          <input type="hidden" name="back" value="review"><input type="hidden" name="anchor" value="item-{{ it.n }}">
+          {% if c.action != "remove_picture" %}<input type="hidden" name="feedback" value="{{ c.text }}">{% endif %}
+          {{ ui.button(c.label, "secondary", size="sm", cost=c.cost, disabled=c.needs and not keys[c.needs], reason=keys[(c.needs or "ai") ~ "_reason"]) }}
+        </form>
+        {% endfor %}
+      {% elif it.type == "proposal" %}
+        <form method="post" action="{{ base }}/apply" class="inline">
+          <input type="hidden" name="version" value="{{ version }}"><input type="hidden" name="review" value="{{ rv.review.id }}"><input type="hidden" name="ids" value="{{ it.id }}"><input type="hidden" name="anchor" value="item-{{ it.n }}">
+          {% if it.action == "remove_picture" %}{{ ui.button("Remove the picture", "secondary", size="sm") }}
+          {% else %}{{ ui.button("Make this change", "secondary", size="sm", cost=it.cost, disabled=it.needs and not keys[it.needs], reason=keys[(it.needs or "ai") ~ "_reason"]) }}{% endif %}
+        </form>
+      {% elif it.type == "left" %}
+        <form method="post" action="{{ base }}/try-again/{{ it.id }}" class="inline">
+          <input type="hidden" name="version" value="{{ version }}"><input type="hidden" name="anchor" value="item-{{ it.n }}">
+          {{ ui.button("Try again", "secondary", size="sm", cost=it.cost, disabled=it.needs and not keys[it.needs], reason=keys[(it.needs or "ai") ~ "_reason"]) }}
+        </form>
+      {% elif it.type == "outline" %}
+        {{ ui.button("Open the editor", "secondary", size="sm", href=base ~ "/edit") }}
+      {% endif %}
+      {% if it.edit_md %}{{ ui.text_action("Edit it yourself", href="?tab=review&edit=" ~ it.id ~ "#item-" ~ it.n, attrs={"data-edit": "item-" ~ it.n}) }}{% endif %}
+      {% if it.kind == "fact" %}{{ ui.text_action("Check the source", href="?tab=sources") }}{% endif %}
+      {% if it.picture %}{{ ui.text_action("On Pictures", href="?tab=pictures#pic-" ~ it.picture.rsplit("/", 1)[-1]) }}{% endif %}
+      <form method="post" action="{{ base }}/not-important/{{ it.id }}" class="inline">
+        <input type="hidden" name="version" value="{{ version }}"><input type="hidden" name="anchor" value="item-{{ it.n }}">
+        {{ ui.text_action("Not important", attrs={"data-not-important": it.id}) }}
+      </form>
+      {% if it.n in shown_marks %}<a class="text-action ritem-show" href="?tab=article&amp;marks=1#mark-{{ it.n }}">Show in the article</a>{% endif %}
+    </footer>
+    {% endif %}
+  </article>
+  {% endif %}
+  {% else %}
+    {% if rv.review.valid is sameas false %}<p class="hint">Nothing listed: the review did not read the article.</p>
+    {% else %}{{ ui.empty_state("circle-check", "Nothing needs you", "What the machine changed is below: look it over, then accept the version.") }}{% endif %}
+  {% endfor %}
+
+  {% if made %}
+  <h2 class="group-title">Changed <span class="muted">{{ made|length }}</span></h2>
+  {% for it in made %}
+  {% if it.type == "yours" %}
+  <article class="ritem is-made is-yours" id="item-{{ it.n }}">
+    <span class="anchor" id="f-{{ it.id }}"></span>
+    <header class="ritem-head"><span class="ritem-n">{{ it.n }}</span><span class="ritem-place">{{ it.section }}</span><span class="ritem-meta">{{ ui.status("by you", "green", quiet=True) }}</span></header>
+    <div class="ritem-body"><p class="ritem-title">{{ it.title }}</p><p class="hint">Written by {{ it.by }}, {{ it.when }}: a version of its own, undone in <a href="?tab=history">History</a>.</p></div>
+  </article>
+  {% else %}
+  {% include "article/_change_card.html" %}
+  {% endif %}
+  {% endfor %}
+  {% endif %}
+
+  {% if closed_items %}
+  <details class="closed-list">
+    <summary>Closed {{ closed_items|length }}</summary>
+    <div class="left-list">{% for c in closed_items %}<div class="left-item"><div>{{ c.title }}<div class="cell-note">{{ c.how }}</div></div></div>{% endfor %}</div>
+  </details>
+  {% endif %}
+
+{% endif %}

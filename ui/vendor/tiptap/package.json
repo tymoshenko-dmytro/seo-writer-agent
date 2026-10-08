@@ -1,0 +1,16 @@
+{
+  "private": true,
+  "description": "Builds ui/static/vendor/tiptap/tiptap.js; see ui/vendor/README.md",
+  "type": "module",
+  "scripts": { "build": "node build.mjs" },
+  "dependencies": {
+    "@tiptap/core": "3.31.2",
+    "@tiptap/extension-image": "3.31.2",
+    "@tiptap/extension-placeholder": "3.31.2",
+    "@tiptap/markdown": "3.31.2",
+    "@tiptap/pm": "3.31.2",
+    "@tiptap/starter-kit": "3.31.2",
+    "marked": "17.0.6"
+  },
+  "devDependencies": { "esbuild": "0.27.7" }
+}

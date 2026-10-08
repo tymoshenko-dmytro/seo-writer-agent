@@ -1,0 +1,21 @@
+# An allowlist: the image gets the app, the project's defaults and the sample article, nothing
+# else (no .env files, no local articles, no tests).
+*
+!bin/
+!cli.py
+!config.yaml
+!core/
+!docker-entrypoint.sh
+!project/
+!requirements.txt
+!samples/
+!ui/
+
+# inside what is allowed: never the articles (they live on the volume), caches, or local state
+project/output
+**/__pycache__
+**/*.pyc
+**/.lock
+**/.env*
+ui/jobs.json
+**/node_modules

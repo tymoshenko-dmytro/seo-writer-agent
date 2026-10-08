@@ -1,0 +1,87 @@
+{#- Pictures: every picture the page shows, with its caption and the picture check's last word;
+    Redo with an optional comment: the producer reads it with the check's note and chooses the kind,
+    or the "⋯" menu picks the kind (a screenshot, an infographic, a chart, an illustration) (a
+    version of its own); Upload your own (free, a version of its own), Remove (a version of its own);
+    where the page shows a problem, Review's decision on it too. The cover first.
+    A picture opens large on click. A picture being made shows it, and the page refreshes when it
+    is done (the rail follows the job). The clean-up of the picture rules at the bottom. -#}
+{% macro upload_form(asset) -%}
+<form method="post" action="{{ base }}/pictures/upload" enctype="multipart/form-data" class="inline pic-upload" data-upload>
+  <input type="hidden" name="asset" value="{{ asset }}"><input type="hidden" name="version" value="{{ version }}">
+  <label class="text-action">Upload<input type="file" name="file" accept="image/png,image/jpeg,image/webp" class="visually-hidden" required aria-label="Upload your own picture for {{ asset }}"></label>
+  <noscript>{{ ui.text_action("Put it in") }}</noscript>
+</form>
+{%- endmacro %}
+{% macro making(asset) -%}
+{%- set state = working.assets.get(asset) -%}
+{%- if state == "running" -%}
+<p class="pic-making" role="status">{{ ui.status("Making it again", "blue", live=True) }}<span class="hint">The new picture shows here when it is ready; the page refreshes by itself.</span></p>
+{%- elif state -%}
+<p class="pic-making" role="status">{{ ui.status("In the queue", "blue", quiet=True) }}<span class="hint">It waits for the job before it; the page refreshes by itself.</span></p>
+{%- endif -%}
+{%- endmacro %}
+{% macro zoom(url, alt) -%}
+<button type="button" class="pic-zoom" data-zoom="{{ url }}" aria-label="Look at it large">
+  <img src="{{ url }}" alt="{{ alt }}" loading="lazy">
+</button>
+{%- endmacro %}
+<div class="pic-grid">
+  <div class="pic{% if working.assets.get(cover_path) %} is-making{% endif %}" id="pic-cover.png">
+    {% if cover %}{{ zoom(cover, "The cover") }}{% else %}<div class="pic-empty">{{ icon("image", 20) }}<span>No cover yet</span></div>{% endif %}
+    <div class="pic-body"><span class="label">The cover</span><span class="hint">the WordPress featured image</span>
+      {{ making(cover_path) }}
+      {% if version and not working.assets.get(cover_path) %}
+      <div class="pic-actions">
+        <form method="post" action="{{ base }}/cover" class="inline"><input type="hidden" name="version" value="{{ version }}">{{ ui.text_action(("New cover" if cover else "Make the cover") ~ (" · " ~ (costs.cover or "")|replace("about ", "") if costs.cover else ""), disabled=not keys.images, reason=keys.images_reason) }}</form>
+        {% if cover %}{{ upload_form(cover_path) }}{% endif %}
+      </div>
+      {% endif %}
+    </div>
+  </div>
+  {% for p in pics %}
+  {% set busy = working.assets.get(p.path) %}
+  <div class="pic{% if busy %} is-making{% endif %}" id="{{ p.id }}">
+    {% if p.exists %}{{ zoom(p.url, p.alt) }}{% else %}<div class="pic-empty">{{ icon("image-off", 20) }}<span>missing on disk</span></div>{% endif %}
+    <div class="pic-body">
+      <span class="pic-caption">{{ p.caption or p.alt or p.path }}</span>
+      {% if busy %}{{ making(p.path) }}{% else %}
+      {{ ui.status(p.check[0], p.check[1], quiet=p.check[2]) }}{% if p.check[3] %}<span class="hint">{{ p.check[3] }}</span>{% endif %}
+      {% if version and p.decide %}
+      {#- Review's decision on this problem, here too: it leaves both tabs (the operator, 2026-10-07) -#}
+      <form method="post" action="{{ base }}/{{ 'keep/' ~ p.decide.keep if p.decide.keep else 'not-important/' ~ p.decide.not_important }}" class="inline pic-decide">
+        <input type="hidden" name="version" value="{{ version }}"><input type="hidden" name="back" value="pictures"><input type="hidden" name="anchor" value="{{ p.id }}">
+        {{ ui.text_action("Keep it as it is" if p.decide.keep else "Not important") }}
+      </form>
+      {% endif %}
+      {% endif %}
+      <span class="hint id">{{ p.path }}</span>
+      {% if version and not busy %}
+      <div class="pic-actions">
+        {% if keys.ai %}<button type="button" class="text-action js-only" data-redo="redo-{{ loop.index }}" aria-expanded="false" aria-controls="redo-{{ loop.index }}">Redo…</button>
+        {% else %}{{ ui.text_action("Redo", cost=costs.visual_edit or None, disabled=True, reason=keys.ai_reason) }}{% endif %}
+        {{ upload_form(p.path) }}
+        <form method="post" action="{{ base }}/pictures/remove" class="inline"><input type="hidden" name="asset" value="{{ p.path }}"><input type="hidden" name="version" value="{{ version }}">{{ ui.text_action("Remove") }}</form>
+      </div>
+      {% if keys.ai %}
+      {#- under the row, which stays as it is; open without JavaScript. Redo: the producer reads the
+          comment with the review's word on the picture and chooses the kind; "⋯" picks it -#}
+      <form method="post" action="{{ base }}/pictures/redraw" class="pic-redo-form" id="redo-{{ loop.index }}">
+        <input type="hidden" name="asset" value="{{ p.path }}"><input type="hidden" name="version" value="{{ version }}">
+        <label class="label" for="redo-in-{{ loop.index }}">What should change? <span class="hint">optional{% if p.check[3] %}; the review's note goes too{% endif %}</span></label>
+        <input class="input" id="redo-in-{{ loop.index }}" name="feedback" maxlength="500" placeholder="{{ 'Show the pricing table, not the header' if p.kind == 'screenshot' else 'Bigger labels, one colour per vendor' }}">
+        <div class="pic-redo-actions">
+          {{ ui.button("Redo", "secondary", size="sm", cost=costs.visual_edit or None, attrs={"name": "kind", "value": "auto"}) }}
+          {% call ui.menu("Make it as another kind") %}
+            {% for k, label in [("screenshot", "As a screenshot"), ("infographic", "As an infographic"), ("chart", "As a chart"), ("image", "As an illustration")] %}
+            <button class="menu-item" type="submit" name="kind" value="{{ k }}"{% if k == "image" and not keys.images %} disabled title="{{ keys.images_reason }}"{% endif %}>{{ label }}{% if k == p.kind %}<span class="hint">now</span>{% endif %}</button>
+            {% endfor %}
+          {% endcall %}
+        </div>
+      </form>
+      {% endif %}
+      {% endif %}
+    </div>
+  </div>
+  {% endfor %}
+</div>
+<div class="section-foot"><form method="post" action="{{ base }}/cleanup" class="inline">{{ ui.text_action("Clean up the pictures (captions, empty charts, pictures in a row)") }}</form><span class="hint">Free, no model call.</span></div>

@@ -1,0 +1,14 @@
+{
+  "producer": "infographic",
+  "spec": {
+    "type": "checklist",
+    "title": "Before you publish a meta description",
+    "items": [
+      "Unique to this page",
+      "Answers the question in 120 characters",
+      "Reads as a sentence",
+      "Promises only what the page delivers",
+      "Ends with a reason to click"
+    ]
+  }
+}

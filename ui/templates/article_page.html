@@ -1,0 +1,64 @@
+{% extends "base.html" %}
+{% import "_ui.html" as ui %}
+{#- The article: the title with one muted line, Edit and the
+    "⋯" menu; the tabs; the tab's content beside the rail of the three facts. ui/article_view.py
+    reads what it shows; every form carries the version the page showed. -#}
+{% set page_title = meta.title %}
+{% set base = "/a/" ~ meta.slug %}
+{% block content %}
+<a class="crumb" href="/">{{ icon("arrow-left", 14) }}Articles</a>
+<header class="page-header">
+  <div class="page-heading"><h1 class="page-title">{{ meta.title }}</h1></div>
+  <div class="page-actions">
+    {{ ui.button("Edit", "secondary", icon_name="pencil", href=base ~ "/edit") }}
+    {% call ui.menu() %}
+      {% if rail.post.link %}<a class="menu-item" href="{{ rail.post.link }}" target="_blank" rel="noopener">{{ icon("external-link") }}Open the post on the blog</a>{% endif %}
+      {% if wp_admin %}<a class="menu-item" href="{{ wp_admin }}" target="_blank" rel="noopener">{{ icon("external-link") }}Open it in WordPress</a>{% endif %}
+      <a class="menu-item" href="{{ base }}/export">{{ icon("file-down") }}Export (.zip)</a>
+      <div class="menu-sep"></div>
+      <button class="menu-item is-danger" type="button" data-dialog="delete-dialog">{{ icon("trash") }}Move to the trash</button>
+    {% endcall %}
+  </div>
+  <p class="page-meta">{{ meta.slug }}<span class="sep">·</span>{{ "{:,}".format(meta.words) }} words<span class="sep">·</span><a href="?tab=history#costs">{{ meta.cost.total|usd }}{% if meta.cost.estimated %} est.{% endif %}</a>{% if updated %}<span class="sep">·</span>updated {{ updated }}{% if version_n %} (v{{ version_n }}){% endif %}{% endif %}</p>
+</header>
+
+{% call ui.dialog("delete-dialog", "Move “" ~ meta.title ~ "” to the trash?", text="The folder moves to the trash and can be restored from there. " ~ ("WordPress post #" ~ rail.post.post_id ~ " is not touched." if rail.post.post_id else "Nothing on WordPress is touched.")) %}
+  <form method="post" action="{{ base }}/delete" class="dialog-actions">
+    {{ ui.button("Cancel", "secondary", type="button", attrs={"data-dialog-close": ""}) }}{{ ui.button("Move to the trash", "danger") }}
+  </form>
+{% endcall %}
+
+{% set needs_n = rv.counts.needs_you if rv.counts else none %}
+{{ ui.tabs([("article", "Article", "?tab=article"), ("review", "Review", "?tab=review", needs_n or none), ("publish", "Publish", "?tab=publish"), ("seo", "SEO", "?tab=seo"), ("pictures", "Pictures", "?tab=pictures"), ("sources", "Sources", "?tab=sources"), ("history", "History", "?tab=history")], tab, label="The article") }}
+
+{% if not version %}{{ ui.banner("The article changed while this page was read: reload it to decide on what is there now.", "yellow", link="Reload", icon_name="refresh-cw") }}{% endif %}
+
+<div class="article-layout" data-tiptap="{{ url_for('static', filename='vendor/tiptap/tiptap.js', v=asset_v('vendor/tiptap/tiptap.js')) }}" data-mdblocks="{{ url_for('static', filename='js/mdblocks.js', v=asset_v('js/mdblocks.js')) }}" data-assets="{{ base }}/">
+  <div class="article-main">
+  {% if tab == "review" %}{% include "article/_review.html" %}
+  {% elif tab == "article" %}
+    {% if n_marks %}
+    <div class="article-tools">{% if marks %}<a class="text-action" href="?tab=article">Hide the review's marks</a><span class="legend"><span><i class="mk is-yellow"></i>needs you: hover a number for what to fix</span></span>
+      {% else %}<a class="text-action" href="?tab=article&amp;marks=1">Show the review's marks ({{ n_marks }}{% if n_open > n_marks %} of {{ n_open }}{% endif %})</a>{% endif %}
+      {% if marks and n_open > n_marks %}<span class="hint">{{ n_open - n_marks }} more {{ "is" if n_open - n_marks == 1 else "are" }} not in the text (the FAQ, the meta, the outline): see <a href="?tab=review">Review</a>.</span>{% endif %}</div>
+    {% endif %}
+    <article class="prose">{% if cover %}<img class="cover" src="{{ cover }}" alt="The cover">{% endif %}{{ html|safe }}</article>
+  {% elif tab == "publish" %}{% include "article/_publish.html" %}
+  {% elif tab == "seo" %}{% include "article/_seo.html" %}
+  {% elif tab == "pictures" %}{% include "article/_pictures.html" %}
+  {% elif tab == "sources" %}{% include "article/_sources.html" %}
+  {% elif tab == "history" %}{% include "article/_history.html" %}
+  {% endif %}
+  </div>
+  {#- one primary per screen (principle 1): a tab with its own (Save, Review it) has the rail's Accept as a secondary -#}
+  {% set tab_primary = version and (tab == "seo" or (tab == "review" and not rv.review and rv.state != "unreadable")) %}
+  {% include "article/_rail.html" %}
+</div>
+<dialog class="pic-view" id="pic-view" aria-label="The picture, large">
+  <img alt="">
+  <form method="dialog"><button class="btn btn-secondary btn-sm" type="submit">Close</button></form>
+</dialog>
+{% endblock %}
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/article_page.js', v=asset_v('js/article_page.js')) }}" defer></script>
+{% endblock %}

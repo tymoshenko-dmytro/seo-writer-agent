@@ -1,0 +1,127 @@
+# The engine's defaults: models, the pipeline's knobs, the SEO thresholds, the paths. Nothing here
+# is about a product: the project (its name, site, texts) lives in project/profile.yaml and in what
+# the setup saves on the data volume.
+
+# Models (the current line as of 2026-09-30). A project can override them in project/profile.yaml.
+# Prices per MTok for reference: Opus 5.5 $4/$20 (cache reads $0.20), Sonnet 5.5 $2/$10 (cache
+# reads $0.20), GPT-5.6-SOL $4/$20 (promo to 2026-11-21).
+# Both 5.5 models think adaptively and cannot turn it off; the code never sends `thinking`,
+# `tool_choice` or sampling parameters, and sets `output_config.effort` on every call.
+models:
+  worker: "claude-sonnet-5-5"     # research, brief, visuals, the picture check ($2/$10)
+  writer: "claude-opus-5-5"       # the copywriter: writer defects cost QA rounds, so top model here
+  editor: "claude-opus-5-5"       # fix applier / re-checks / standalone flows ($4/$20, below Opus 5)
+  visuals: "claude-opus-5-5"      # the picture producer and its look at each screenshot
+  max_tokens: 8192
+
+# Pipeline defaults (override per-product or per-run)
+pipeline:
+  use_ahrefs: true
+  target_words: 2000
+  deep_research_processor: "pro"   # parallel.ai: lite | core | pro | ultra. pro costs
+                                   # ~4x core but fact quality is the bottleneck — an
+                                   # article shipped with 4 citations instead of 16
+  research_topup_max: 8   # products the article must name that the research has no fact about:
+                          # one parallel.ai Search call each (own site first), cents per article.
+                          # 0 turns the top-up off.
+  # QA: ONE review by the panel (core/qa_review): the machine makes the safe changes, each a
+  # version with its check (agents/edit_verifier), and lists the rest for the person; the article
+  # is never re-read in a loop. The operator's call (2026-09-28): on the trials every re-read round
+  # added 1-6 new serious findings and the rounds were ~$5 of ~$6 in model spend.
+  qa:
+    visual_check: true  # a vision model looks at every picture with its caption (agents/visual_checker),
+                        # ~$0.01 a picture; its findings join the review's
+    reads: 3          # editor reads in the review; diversity comes from sampling (temperature 1.0)
+    # The panel: one read per entry, cycled to `reads`. Cross-vendor on purpose — different
+    # models miss different things, which is the one risk same-model sampling cannot cover.
+    # Read 1 (the hinted one) goes to the first entry. "openai:" prefix routes to OpenAI.
+    panel:
+      - "claude-opus-5-5"
+      - "claude-sonnet-5-5"
+      - "openai:gpt-5.6-sol"
+    match_findings: true    # one worker call per review decides, by meaning, which raw findings are
+                            # one problem and which repeat one a person closed as not important
+                            # (agents/finding_matcher); the same words decide when it is off or
+                            # fails. models.matcher overrides the model.
+    read_effort: "medium"   # Claude 5 adaptive thinking on panel reads: high burned the whole
+                            # output budget on thinking; medium reasons enough for a verdict
+  visuals:
+    # A SANITY ceiling, not a target: the target comes from what the ranking pages actually
+    # carry (content_benchmark.images_median). At 10 the ceiling was binding — a roundup whose
+    # competitors carried a median of 14 could not fit one screenshot per reviewed product,
+    # so the editor kept demanding them and the queue filled with visuals the budget forbade.
+    max_per_article: 16
+    words_per_visual: 350
+    cover_quality: "medium"   # gpt-image-2: low=draft, medium=working, high=final (~$0.006/$0.05/$0.21)
+    vision_check: true        # the producer looks at each screenshot it takes, with the page's
+                              # sections (visual_director.look_at_shot, one vision call, ~$0.02 on
+                              # Opus 5.5, ~$0.01 on Sonnet): refuses captchas, walls, wrong-language and
+                              # wrong pages the DOM checks miss, and takes the shot again on the
+                              # section the caption is about (up to 2 times). On since 2026-10-06
+                              # (the operator: the producer decides what to crop and checks itself).
+
+# Where third-party pages are opened: screenshots and competitor page audits. "scrapfly" opens
+# them in Scrapfly's browser in the country seo.country names (the market Ahrefs reads), so a page
+# shows what a reader there sees: language, prices, consent banners. It needs SCRAPFLY_KEY in
+# .env; without it the local browser is used. Unblocker is enabled on every Scrapfly scrape;
+# it may upgrade proxies or enable a browser to solve challenges, increasing credit usage.
+# The explicit country is respected. Charts and infographics are rendered locally either way.
+browser:
+  backend: scrapfly         # scrapfly | local
+
+# Keyword-research / SERP stage (SEO team's prototype workflow). Override per-product in
+# project/profile.yaml.
+seo:
+  country: "us"             # SERP + volumes are country-specific; this is the demand market
+  serp_top: 20              # SERP positions to pull (features eat slots, so 10 is too few)
+  prototypes_min: 3         # competitor articles to tear down in full: the top-ranked benchmark
+  prototypes_max: 7         # plus the ones ranking highest relative to their link profile
+  prototype_max_position: 10  # never prototype a page outside the top 10 — nobody competes there
+  prototype_min_h2: 2         # a page with no subheadings is not a structured article, whatever
+  prototype_min_words: 700    # Ahrefs' page_type calls it. API docs and encyclopaedia entries
+                              # were setting our length target and halved three articles.
+  prototype_borrow_keywords: 6  # when the primary SERP cannot supply enough qualified pages,
+                              # borrow from these many other high-volume pool keywords —
+                              # for MEASURING format only, never for content strategy
+  audit_max_pages: 14         # raised: time is not a constraint and a bigger measured sample is
+                              # the fix for unstable length targets
+  lsi:
+    also_talk_about: 60     # LSI vocabulary: terms the ranking pages MENTION
+    also_rank_for: 40       # semantic siblings: terms those pages also rank for
+    keep: 40                # how many survive filtering into the brief/writer
+  meta:
+    title_min: 50
+    title_max: 70
+    description_min: 130
+    description_max: 150
+  # Keyword coverage report (core/keyword_report.py -> 06_keywords.md). OUR house thresholds,
+  # not an external standard — nobody publishes the real weighting.
+  keywords:
+    primary_min_total: 3          # times the primary keyword must appear (H1 + headings + body)
+    primary_density_min: 0.5      # % — reported for reference, NOT enforced
+    primary_density_max: 2.5      # % — enforced as a ceiling; above this it reads as stuffing
+    primary_in_headings_min: 1    # H2/H3s that must carry it, on top of the H1
+    primary_in_first_words: 100   # it should appear this early in the body
+    secondary_coverage_min: 50    # % of the analyst's secondary targets present at least once
+    section_keyword_coverage_min: 50   # % of the brief's per-section keywords present
+    lsi_coverage_min: 30          # % of the LSI vocabulary present
+    # mandatory: ["..."]          # keywords SEO decided every article must carry, beyond the
+    #                             # primary. Left unset on purpose: until Studio can pause before
+    #                             # the brief this list is project-wide, so each keyword in it
+    #                             # blocks the keyword gate of EVERY article that lacks it.
+  # Uniqueness / plagiarism pass (core/plagiarism_report.py -> 07_plagiarism.md).
+  # Provider: Winston AI (synchronous, returns the matched passages, supports excluded_sources).
+  # Costs 2 credits per word, so a 3 500-word article is ~7 000 credits.
+  plagiarism:
+    run_on_finalize: true # check every finished article. ~2 credits/word, so a 3 500-word
+                          # article costs ~7 000 — about 140 articles per million credits.
+                          # Skipped automatically when WINSTON_API_KEY is absent.
+    warn_below: 90        # % uniqueness we aim for
+    fail_below: 80        # % below which the report fails
+    min_passage_words: 8  # shorter matches are common phrasing, not copied text
+    # our_domains: [...]  # excluded from matching; default: the project's brand.domains
+
+paths:
+  prompts: "core/prompts"
+  project: "project"
+  output: "project/output"

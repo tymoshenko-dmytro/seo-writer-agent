@@ -1,0 +1,55 @@
+{#- The app shell: the sidebar with the workspace,
+    the navigation in three groups and the foot (jobs, this month's spend, the session, the
+    version); the content on the canvas. -#}
+{% extends "_page.html" %}
+{% block body %}
+<a class="skip-link" href="#main">Skip to the content</a>
+<div class="app">
+  <aside class="sidebar" id="sidebar" aria-label="Sidebar">
+    <a class="workspace" href="/">
+      {% if shell.logo and shell.logo.shape == "wordmark" %}
+      <span class="workspace-text">
+        <img class="workspace-wordmark" src="{{ shell.logo.url }}" alt="{{ shell.project }}">
+        <span class="workspace-product">{{ shell.product }}</span>
+      </span>
+      {% else %}
+      {% if shell.logo %}<img class="workspace-logo" src="{{ shell.logo.url }}" alt="">
+      {% else %}<span class="workspace-mark" aria-hidden="true">{{ shell.initial }}</span>{% endif %}
+      <span class="workspace-text">
+        <span class="workspace-name">{{ shell.project }}</span>
+        {% if shell.project != shell.product %}<span class="workspace-product">{{ shell.product }}</span>{% endif %}
+      </span>
+      {% endif %}
+    </a>
+    <button class="btn btn-ghost sidebar-toggle" type="button" aria-expanded="false" aria-controls="sidebar-nav">{{ icon("menu") }}<span>Menu</span></button>
+    <nav class="nav" id="sidebar-nav" aria-label="Main">
+      {% for group, items in shell.nav %}
+      <div class="nav-group" role="group" aria-labelledby="nav-group-{{ loop.index }}">
+        <div class="nav-label" id="nav-group-{{ loop.index }}">{{ group }}</div>
+        {% for key, label, href, icon_name in items %}
+        <a class="nav-item" href="{{ href }}"{% if shell.active == key %} aria-current="page"{% endif %}>{{ icon(icon_name) }}<span>{{ label }}</span></a>
+        {% endfor %}
+      </div>
+      {% endfor %}
+    </nav>
+    <div class="sidebar-foot">
+      {% set j = shell.jobs %}
+      <a class="foot-row" href="{{ '/a/' ~ j.slug if j.slug else '/' }}" data-jobs="{{ j.count }}">
+        <span class="pulse{{ ' is-idle' if not j.count }}" aria-hidden="true"></span>
+        <span class="foot-text">{% if j.count %}{{ j.count }} job{{ "s" if j.count > 1 }} · {{ j.label }}{% else %}No jobs running{% endif %}</span>
+      </a>
+      <a class="foot-row" href="/costs">{{ icon("wallet") }}<span class="foot-text">{{ shell.spend|usd }} this month</span></a>
+      {% if shell.signed_in %}
+      <div class="foot-row"><form method="post" action="/logout"><button type="submit">{{ icon("log-out") }}<span>Log out</span></button></form></div>
+      {% endif %}
+      <div class="foot-row foot-version">{{ shell.version }}</div>
+    </div>
+  </aside>
+  <main class="content" id="main" tabindex="-1">
+    <div class="content-inner">
+      {% block banners %}{% endblock %}
+      {% block content %}{% endblock %}
+    </div>
+  </main>
+</div>
+{% endblock %}

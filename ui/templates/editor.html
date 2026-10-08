@@ -1,0 +1,110 @@
+{% extends "base.html" %}
+{% import "_ui.html" as ui %}
+{#- The block editor: a bar with Back, the saving state,
+    Blocks / Markdown, Versions and Save; the article as blocks (TipTap over its Markdown,
+    ui/static/js/mdblocks.js) with a gutter to add and move blocks, a selection bar, an AI edit
+    that waits for a yes; Save is a version of its own; leaving with unsaved changes asks. Without
+    JavaScript the article's Markdown is a text box and Save works the same. -#}
+{% set page_title = "Editing: " ~ meta.title %}
+{% set base = "/a/" ~ meta.slug %}
+{% block content %}
+<form method="post" action="{{ base }}/edit" id="editor-form">
+  <input type="hidden" name="revision" value="{{ revision }}">
+  <div class="editor-bar">
+    <a class="crumb editor-back" href="{{ base }}" data-leave>{{ icon("arrow-left", 14) }}Back to the article</a>
+    <span class="editor-status" id="editor-state" aria-live="polite">{% if newer %}{{ ui.status("Not saved: the article changed", "red") }}{% elif saved %}{{ ui.status("Saved · " ~ saved, "green", quiet=True) }}{% endif %}</span>
+    <span class="editor-tools">
+      <span class="toggle" role="group" aria-label="View">
+        <button type="button" class="toggle-item" aria-current="true" data-view="blocks">Blocks</button>
+        <button type="button" class="toggle-item" aria-current="false" data-view="markdown">Markdown</button>
+      </span>
+      <button type="button" class="text-action" id="versions-open" aria-controls="versions-drawer" aria-expanded="false">{{ icon("rotate-ccw-clock", 14) }}Versions</button>
+      {{ ui.button("Save", "primary", attrs={"id": "editor-save", "title": "Save (⌘S): a new version"}) }}
+    </span>
+  </div>
+  {% if newer %}
+  <div class="banner is-yellow" role="alert">{{ icon("circle-alert") }}<span class="banner-text">The article changed since you opened it. Your text is below.</span>
+    <label class="check"><input type="checkbox" name="overwrite" value="{{ newer }}"> Replace the newer version with my text</label></div>
+  {% endif %}
+  <div class="editor-doc" id="editor-doc" spellcheck="true">
+    <textarea class="textarea editor-md" name="body" id="editor-md" aria-label="The article in Markdown">{{ body }}</textarea>
+    {% if saved_body is not none %}{# a refused save: the text below is not saved; this is what is (review RF9C-01) #}
+    <textarea id="editor-saved" hidden aria-hidden="true" tabindex="-1">{{ saved_body }}</textarea>{% endif %}
+  </div>
+</form>
+
+<div class="editor-ui" id="editor-ui" data-slug="{{ meta.slug }}" data-assets="{{ base }}/" data-version="{{ version }}"
+     data-ai-cost="{{ costs.ai_edit or '' }}" data-insert-cost="{{ costs.visual_insert or '' }}" data-redraw-cost="{{ costs.visual_edit or '' }}" hidden>
+  <div class="eblock-gutter is-floating" id="gutter" hidden>
+    <button type="button" data-gutter="add" aria-label="Add a block below">{{ icon("plus", 14) }}</button>
+    <button type="button" data-gutter="menu" aria-label="Move or delete this block">{{ icon("grip-vertical", 14) }}</button>
+  </div>
+  <div class="slash-menu is-floating" id="block-menu" role="menu" hidden>
+    <button type="button" class="slash-item" data-act="up">{{ icon("arrow-up", 16) }}<span>Move up</span><span class="hint"></span></button>
+    <button type="button" class="slash-item" data-act="down">{{ icon("arrow-down", 16) }}<span>Move down</span><span class="hint"></span></button>
+    <button type="button" class="slash-item" data-act="section-up" data-heading-only>{{ icon("arrow-up", 16) }}<span>Move the section up</span><span class="hint">with its text</span></button>
+    <button type="button" class="slash-item" data-act="section-down" data-heading-only>{{ icon("arrow-down", 16) }}<span>Move the section down</span><span class="hint">with its text</span></button>
+    <button type="button" class="slash-item" data-act="delete">{{ icon("trash", 16) }}<span>Delete the block</span><span class="hint"></span></button>
+  </div>
+  <div class="slash-menu is-floating" id="slash-menu" role="listbox" aria-label="Add a block" hidden>
+    {% for key, ic, name, hint in [("text", "file-text", "Text", "a paragraph"), ("h2", "heading-2", "Heading", "a section"),
+                                   ("h3", "heading-3", "Subheading", "inside a section"), ("ul", "list", "List", "bullets"),
+                                   ("ol", "list-ordered", "Numbered list", ""), ("quote", "quote", "Quote", ""),
+                                   ("table", "table", "Table", "rows and columns, as Markdown"),
+                                   ("picture", "image", "Picture", "a chart, an infographic or a screenshot · " ~ (costs.visual_insert or "paid"))] %}
+    <button type="button" class="slash-item" role="option" data-block="{{ key }}">{{ icon(ic, 16) }}<span>{{ name }}</span><span class="hint">{{ hint }}</span></button>
+    {% endfor %}
+  </div>
+  <div class="sel-bar is-floating" id="sel-bar" role="toolbar" aria-label="Format" hidden>
+    <button type="button" data-mark="bold" aria-label="Bold"><b>B</b></button>
+    <button type="button" data-mark="italic" aria-label="Italic"><i>I</i></button>
+    <button type="button" data-mark="link" aria-label="Link">{{ icon("link", 14) }}</button>
+    <span class="sel-sep"></span>
+    <button type="button" data-mark="h2">H2</button><button type="button" data-mark="h3">H3</button>
+    <span class="sel-sep"></span>
+    <button type="button" data-mark="ai">Edit with AI</button>
+  </div>
+  <div class="sel-bar is-floating" id="raw-bar" role="toolbar" aria-label="A table, a quote or HTML, kept as Markdown" hidden>
+    <button type="button" data-raw="edit">Edit as Markdown</button>
+    <button type="button" data-raw="remove">Remove</button>
+  </div>
+  <div class="sel-bar is-floating pic-bar" id="pic-bar" role="toolbar" aria-label="The picture" hidden>
+    <button type="button" data-pic="alt">Alt text</button>
+    <button type="button" data-pic="redraw">Redraw{% if costs.visual_edit %} · {{ costs.visual_edit }}{% endif %}</button>
+    <button type="button" data-pic="remove">Remove</button>
+  </div>
+  <div class="ai-card is-floating" id="ask" role="dialog" aria-label="A request" hidden>
+    <div class="ai-card-head"><span id="ask-title"></span><span class="hint" id="ask-cost"></span></div>
+    <input class="input" id="ask-input" autocomplete="off" aria-labelledby="ask-title">
+    <textarea class="textarea editor-md" id="ask-text" rows="8" hidden aria-label="The block's Markdown"></textarea>
+    <div class="ask-result" id="ask-result" hidden></div>
+    <div class="btn-row" id="ask-actions"></div>
+  </div>
+</div>
+
+{% call ui.dialog("leave-dialog", "Leave without saving?", text="Your changes are not saved. Leaving drops them; the article stays as it was.") %}
+  <div class="dialog-actions">{{ ui.button("Keep editing", "secondary", type="button", attrs={"data-dialog-close": ""}) }}{{ ui.button("Leave without saving", "danger", type="button", attrs={"id": "leave-go"}) }}</div>
+{% endcall %}
+
+<aside class="drawer" id="versions-drawer" aria-label="Versions" hidden>
+  <div class="drawer-head"><h2 class="panel-title">Versions</h2><button type="button" class="btn btn-ghost" id="versions-close" aria-label="Close">{{ icon("x") }}</button></div>
+  <p class="hint drawer-text">Each Save, each change by a review, each revert and restore is a version. Restoring one makes it the newest; nothing is lost.</p>
+  <ul class="versions">
+    {% for v in versions %}
+    {% if v.review %}
+    <li class="v-group">
+      <details>
+        <summary class="v-head"><span class="v-n">{{ icon("chevron-down", 14, cls="v-chev") }}</span><span class="v-what">{{ v.title }}: {{ v["items"]|length }} change{{ "s" if v["items"]|length != 1 }}</span><span class="hint">{{ v.when }}</span></summary>
+        <ul class="versions v-sub">{% for x in v["items"] %}{% with v=x %}{% include "article/_editor_version.html" %}{% endwith %}{% endfor %}</ul>
+      </details>
+    </li>
+    {% else %}{% include "article/_editor_version.html" %}{% endif %}
+    {% endfor %}
+  </ul>
+</aside>
+{% endblock %}
+{% block scripts %}
+<script src="{{ url_for('static', filename='vendor/tiptap/tiptap.js', v=asset_v('vendor/tiptap/tiptap.js')) }}" defer></script>
+<script src="{{ url_for('static', filename='js/mdblocks.js', v=asset_v('js/mdblocks.js')) }}" defer></script>
+<script src="{{ url_for('static', filename='js/block_editor.js', v=asset_v('js/block_editor.js')) }}" defer></script>
+{% endblock %}

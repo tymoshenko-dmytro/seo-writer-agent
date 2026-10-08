@@ -1,0 +1,224 @@
+{#- SEO Writer Agent: the components, built once and used everywhere. Import with
+    {% import "_ui.html" as ui %}; ui.css styles them; /design shows each one. `icon()` and the `word_diff` filter are the app's globals (ui/icons.py, ui/diff.py). -#}
+
+{#- A button says what it does and to what (principle 2). kind: primary (one per screen),
+    secondary, ghost, danger (Delete only), mono. A paid action passes `cost` ("about $0.60") and
+    shows it after the words (principle 8). A disabled one says why, in words beside it. -#}
+{% macro button(label, kind="secondary", icon_name=None, type="submit", href=None, name=None, value=None,
+                disabled=False, reason=None, cost=None, size=None, block=False, attrs={}) -%}
+{%- set cls = "btn btn-" ~ kind ~ (" btn-sm" if size == "sm" else "") ~ (" btn-block" if block else "") -%}
+{%- set inner -%}
+{% if icon_name %}{{ icon(icon_name) }}{% endif %}<span>{{ label }}</span>{% if cost %}<span class="btn-cost">· {{ cost }}</span>{% endif %}
+{%- endset -%}
+{%- if href and not disabled -%}
+<a class="{{ cls }}" href="{{ href }}"{{ attrs|xmlattr }}>{{ inner }}</a>
+{%- elif href -%}
+<span class="{{ cls }}" aria-disabled="true"{{ attrs|xmlattr }}>{{ inner }}</span>
+{%- else -%}
+<button class="{{ cls }}" type="{{ type }}"{% if name %} name="{{ name }}"{% endif %}{% if value is not none %} value="{{ value }}"{% endif %}{% if disabled %} disabled{% endif %}{{ attrs|xmlattr }}>{{ inner }}</button>
+{%- endif -%}
+{%- if disabled and reason %}<span class="btn-reason">{{ reason }}</span>{% endif -%}
+{%- endmacro %}
+
+{#- A chip: a dot and a word, in its state's colour (gray, green, yellow, orange, blue, red).
+    `plain` drops the dot (a finding's kind); `live` pulses it (a job working). -#}
+{% macro chip(word, state="gray", plain=False, live=False, tip=None) -%}
+<span class="chip is-{{ state }}{{ ' is-plain' if plain }}{{ ' is-live' if live }}"{% if tip %} title="{{ tip }}"{% endif %}>{{ word }}</span>
+{%- endmacro %}
+
+{#- A finding's severity: a dot whose weight says how serious, and the word. -#}
+{% macro severity(sev) -%}
+{%- set s = sev if sev in ("critical", "major", "minor", "nitpick") else "unknown" -%}
+<span class="sev is-{{ s }}">{{ {"critical": "Critical", "major": "Major", "minor": "Minor", "nitpick": "Nitpick"}.get(s, "Severity unknown") }}</span>
+{%- endmacro %}
+
+{#- The check's opinion of a change (contract 7): an opinion, never a pass. -#}
+{% macro check_chip(result, note=None) -%}
+{%- if result == "fixed" -%}{{ chip("the check thinks it is fixed", "green", tip=note) }}
+{%- elif result == "still_there" -%}{{ chip("the problem is still there", "yellow", tip=note) }}
+{%- else -%}{{ chip("could not check", "gray", tip=note) }}{%- endif -%}
+{%- endmacro %}
+
+{#- The page header: the title, quiet secondary links beside it (`links`: (label, href) pairs),
+    the actions at the right (the caller; the primary action last). -#}
+{% macro page_header(title, sub=None, links=()) -%}
+<header class="page-header">
+  <div class="page-heading">
+    <h1 class="page-title">{{ title }}</h1>
+    {% if links %}<div class="page-links">{% for label, href in links %}<a class="btn btn-mono" href="{{ href }}">{{ label }}</a>{% endfor %}</div>{% endif %}
+  </div>
+  {% if caller is defined %}<div class="page-actions">{{ caller() }}</div>{% endif %}
+  {% if sub %}<p class="page-sub">{{ sub }}</p>{% endif %}
+</header>
+{%- endmacro %}
+
+{#- A fact card: a label, one line of state, one line of time, one action (the caller). The
+    state is a chip when `state_color` is given. `alert` is a red line (an unknown outcome). -#}
+{% macro fact_card(label, state, state_color=None, time=None, alert=None, id=None) -%}
+<section class="fact"{% if id %} id="{{ id }}"{% endif %} aria-label="{{ label }}">
+  <div class="card-label">{{ label }}</div>
+  <div class="fact-state">{% if state_color %}{{ chip(state, state_color) }}{% else %}{{ state }}{% endif %}</div>
+  {% if time %}<div class="fact-time">{{ time }}</div>{% endif %}
+  {% if alert %}<div class="fact-alert" role="alert">{{ icon("circle-alert") }}<span>{{ alert }}</span></div>{% endif %}
+  {% if caller is defined %}<div class="fact-action">{{ caller() }}</div>{% endif %}
+</section>
+{%- endmacro %}
+
+{#- A number in the strip (a link when `href`), and one big number on a card. -#}
+{% macro stat(value, label, href=None) -%}
+{%- if href -%}<a class="stat" href="{{ href }}">{%- else -%}<div class="stat">{%- endif -%}
+<span class="stat-value">{{ value }}</span><span class="stat-label">{{ label }}</span>
+{%- if href -%}</a>{%- else -%}</div>{%- endif -%}
+{%- endmacro %}
+
+{#- A banner: one line, a link to fix it (no `href`: the link reloads this page). state: yellow
+    (stale, changed), blue (busy), red (a missing key, a failure), gray (setup incomplete). -#}
+{% macro banner(text, state="gray", link=None, href=None, icon_name=None) -%}
+<div class="banner is-{{ state }}" role="{{ 'alert' if state in ('red', 'yellow') else 'status' }}">
+  {% if icon_name %}{{ icon(icon_name) }}{% endif %}<span class="banner-text">{{ text }}</span>
+  {% if link %}<a href="{{ href or '' }}">{{ link }}</a>{% endif %}
+</div>
+{%- endmacro %}
+
+{#- The stale page (principle 5): one banner, nothing else changes. -#}
+{% macro stale_banner() -%}
+{{ banner("This page is out of date: reload", "yellow", link="Reload", icon_name="refresh-cw") }}
+{%- endmacro %}
+
+{#- An empty state: an icon, a title, one sentence, one action. -#}
+{% macro empty_state(icon_name, title, text, action=None, href=None, primary=True) -%}
+<div class="empty-state">
+  <div class="empty-icon">{{ icon(icon_name, 20) }}</div>
+  <div class="empty-title">{{ title }}</div>
+  <p class="empty-text">{{ text }}</p>
+  {% if action and href %}{{ button(action, "primary" if primary else "secondary", href=href) }}{% endif %}
+</div>
+{%- endmacro %}
+
+{#- Quiet tabs. items: (key, label, href[, count]); the active one is aria-current. -#}
+{% macro tabs(items, active, label="Sections") -%}
+<nav class="tabs" aria-label="{{ label }}">
+  {% for it in items %}<a class="tab" href="{{ it[2] }}"{% if it[0] == active %} aria-current="page"{% endif %}>{{ it[1] }}{% if it|length > 3 and it[3] is not none %}<span class="tab-count">{{ it[3] }}</span>{% endif %}</a>{% endfor %}
+</nav>
+{%- endmacro %}
+
+{#- Filters in mono capitals (Parallel's PRODUCT: ALL). items: (key, label, href[, count]). -#}
+{% macro filters(items, active, label="Filter") -%}
+<nav class="filters" aria-label="{{ label }}">
+  {% for it in items %}<a class="filter" href="{{ it[2] }}"{% if it[0] == active %} aria-current="true"{% endif %}>{{ it[1] }}{% if it|length > 3 and it[3] is not none %} <span class="filter-count">{{ it[3] }}</span>{% endif %}</a>{% endfor %}
+  {% if caller is defined %}{{ caller() }}{% endif %}
+</nav>
+{%- endmacro %}
+
+{#- A two-way toggle (Markdown / blocks, dollars / units). items: (key, label, href). -#}
+{% macro toggle(items, active, label="View") -%}
+<div class="toggle" role="group" aria-label="{{ label }}">
+  {% for key, text, href in items %}<a class="toggle-item" href="{{ href }}" aria-current="{{ 'true' if key == active else 'false' }}">{{ text }}</a>{% endfor %}
+</div>
+{%- endmacro %}
+
+{#- A form field: the label, a hint, the control (the caller). -#}
+{% macro field(label, for_id, hint=None) -%}
+<div class="field">
+  <label class="label" for="{{ for_id }}">{{ label }}</label>
+  {% if hint %}<span class="hint" id="{{ for_id }}-hint">{{ hint }}</span>{% endif %}
+  {{ caller() }}
+</div>
+{%- endmacro %}
+
+{#- A job working in place: a progress line and its step (principle 7). -#}
+{% macro progress(text, step=None) -%}
+<div class="progress" role="status">
+  <div class="progress-text">{{ icon("loader-circle", cls="icon-spin") }}<span>{{ text }}{% if step %} · {{ step }}{% endif %}</span></div>
+  <div class="progress-track"></div>
+</div>
+{%- endmacro %}
+
+{#- A change: before → after with word-level marks, its place, the check's opinion, and
+    (the caller) Revert on the latest only. `pics`: {"before": url, "after": url}. -#}
+{% macro change_card(place, before=None, after=None, check=None, check_note=None, pics=None, why=None, detail=None) -%}
+<article class="change">
+  <header class="change-head">
+    <span class="change-place">{{ place }}{% if detail %} <b>{{ detail }}</b>{% endif %}</span>
+    {{ check_chip(check, check_note) }}
+  </header>
+  <div class="change-body">
+    {% if pics %}
+    <div class="change-pics">
+      <figure><img src="{{ pics.before }}" alt="The picture before the change" loading="lazy"><figcaption>Before</figcaption></figure>
+      {{ icon("arrow-right") }}
+      <figure><img src="{{ pics.after }}" alt="The picture after the change" loading="lazy"><figcaption>After</figcaption></figure>
+    </div>
+    {% endif %}
+    {% if before or after %}<div class="change-text">{{ before|word_diff(after) }}</div>{% endif %}
+    {% if why %}<div class="change-why">{{ why }}</div>{% endif %}
+  </div>
+  {% if caller is defined %}<footer class="change-foot">{{ caller() }}</footer>{% endif %}
+</article>
+{%- endmacro %}
+
+{#- A proposal: a checkbox, why it needs a choice, the finding's text, its target, its severity. -#}
+{% macro proposal_row(name, value, why, text, target=None, severity_=None, kind=None, thumb=None, checked=False) -%}
+<label class="proposal">
+  <input type="checkbox" name="{{ name }}" value="{{ value }}"{% if checked %} checked{% endif %}>
+  <div>
+    <div class="proposal-why">{{ why }}</div>
+    <div class="proposal-text">{{ text }}</div>
+    <div class="proposal-meta">
+      {% if severity_ %}{{ severity(severity_) }}{% endif %}
+      {% if kind %}<span>{{ kind }}</span>{% endif %}
+      {% if target or thumb %}<span class="target">{% if thumb %}<img class="target-thumb" src="{{ thumb }}" alt="" loading="lazy"> {% endif %}{{ target or "" }}</span>{% endif %}
+    </div>
+  </div>
+</label>
+{%- endmacro %}
+
+{#- A dialog that names the action and its target. The caller holds its body (the check
+    results) and its actions; `data-dialog-close` buttons close it. Open it with dialog_button:
+    with JavaScript it opens the dialog, without it the link goes to `fallback` (a page that asks
+    the same question). -#}
+{% macro dialog(id, title, text=None) -%}
+<dialog class="dialog" id="{{ id }}" aria-labelledby="{{ id }}-title">
+  <div class="dialog-body">
+    <h2 class="dialog-title" id="{{ id }}-title">{{ title }}</h2>
+    {% if text %}<p class="dialog-text">{{ text }}</p>{% endif %}
+    {{ caller() }}
+  </div>
+</dialog>
+{%- endmacro %}
+
+{% macro dialog_button(id, label, kind="secondary", icon_name=None, fallback="#", cost=None, block=False) -%}
+{{ button(label, kind, icon_name=icon_name, href=fallback, cost=cost, block=block,
+          attrs={"data-dialog": id, "role": "button", "aria-haspopup": "dialog"}) }}
+{%- endmacro %}
+
+{#- A toast: the result of an action, at the bottom centre for a few seconds. -#}
+{% macro toast(message) -%}
+<div class="toast"><span>{{ message }}</span><button class="toast-close" type="button" aria-label="Dismiss">{{ icon("x") }}</button></div>
+{%- endmacro %}
+
+{#- A sortable table header: `state` is "ascending", "descending" or None. -#}
+{% macro th_sort(label, href, state=None, num=False) -%}
+<th{% if state %} aria-sort="{{ state }}"{% endif %}{% if num %} class="num"{% endif %}><a href="{{ href }}">{{ label }}{% if state == "ascending" %}{{ icon("chevron-down", 12, cls="flip") }}{% elif state == "descending" %}{{ icon("chevron-down", 12) }}{% endif %}</a></th>
+{%- endmacro %}
+
+{#- A state in a list or a card (principle 12): a dot and a word, no border, no fill. `quiet`
+    greys the word (nothing that needs the person). -#}
+{% macro status(word, state="gray", quiet=False, live=False) -%}
+<span class="status is-{{ state }}{{ ' is-quiet' if quiet }}{{ ' is-live' if live }}">{{ word }}</span>
+{%- endmacro %}
+
+{#- The "⋯" menu (principle 11): the actions a screen keeps out of sight. The caller holds
+    `.menu-item` links, or forms with a `.menu-item` button. Works without JavaScript. -#}
+{% macro menu(label="More actions") -%}
+<details class="menu">
+  <summary class="btn btn-ghost" aria-label="{{ label }}" title="{{ label }}">{{ icon("ellipsis") }}</summary>
+  <div class="menu-list">{{ caller() }}</div>
+</details>
+{%- endmacro %}
+
+{#- A small text action that belongs to one fact or one row ("Review again · about $0.60"). -#}
+{% macro text_action(label, href=None, cost=None, type="submit", attrs={}, disabled=False, reason=None) -%}
+{%- if href -%}<a class="text-action" href="{{ href }}"{{ attrs|xmlattr }}>{{ label }}{% if cost %} · {{ cost }}{% endif %}</a>
+{%- else -%}<button class="text-action" type="{{ type }}"{% if disabled %} disabled{% if reason %} title="{{ reason }}"{% endif %}{% endif %}{{ attrs|xmlattr }}>{{ label }}{% if cost %} · {{ cost }}{% endif %}</button>{%- endif -%}
+{%- endmacro %}

@@ -1,0 +1,61 @@
+{# What this article cost: included by the article page and the run page. `meta.cost` is
+   core/usage.summarize() over the article's ledger (or an estimate for older articles). #}
+{% set c = meta.cost %}
+<section class="costbox" id="cost">
+  <div class="cost-head">
+    <div>
+      <h4>Cost of this article</h4>
+      <div class="cost-total">{{ c.total|usd }}</div>
+      <div class="hint">
+        {% if c.estimated %}Partly estimated: this article was written before cost tracking, so its
+          start is worked out from what its run record kept (the last pipeline pass, models inferred
+          from their roles); everything recorded since is exact.
+        {% elif c.limits %}Every paid call recorded since cost tracking began; part of the earlier
+          history is not known, so the total is lower than what the article cost.
+        {% elif c.calls %}Every paid call made for it: the models, images, research, SEO data, page
+          captures and the uniqueness check, including every edit since.
+        {% else %}Nothing paid has been recorded for this article yet.{% endif %}
+        {# shown whether or not anything was estimated: an estimate can drop out entirely (review RD-01) #}
+        {% if c.limits %}<br>Not known: {{ c.limits|join('; ') }}.{% endif %}
+      </div>
+    </div>
+    <a class="btn ghost" href="/costs">All articles →</a>
+  </div>
+  {% if c.unpriced %}
+  <div class="unpriced">Not in the total:
+    {% for u in c.unpriced %}{{ u.provider|capitalize }} {{ u.units|units }}{{ '; ' if not loop.last }}{% endfor %}
+    — no price set. <a href="/settings/prices">Set prices</a></div>
+  {% endif %}
+  {% if c.by_category %}
+  <div class="cost-grid">
+    <div>
+      <h4>By part of the article</h4>
+      <table class="ctable">
+        {% for r in c.by_category %}
+        <tr><td>{{ r.label }}</td>
+            <td style="width:40%"><div class="bar"><i style="width:{{ (r.share * 100)|round(1) }}%"></i></div></td>
+            <td class="m">{{ r.cost|usd }}</td>
+            <td class="m sub-u">{{ (r.share * 100)|round|int }}%</td></tr>
+        {% endfor %}
+      </table>
+    </div>
+    <div>
+      <h4>By service</h4>
+      <table class="ctable">
+        {% for r in c.by_provider %}
+        <tr><td>{{ r.label }}<div class="sub-u">{{ r.units|units }}</div></td>
+            <td class="m">{{ r.cost|usd if r.cost else '—' }}</td></tr>
+        {% endfor %}
+      </table>
+    </div>
+  </div>
+  <h4>By action</h4>
+  <table class="ctable">
+    {% for o in c.by_operation %}
+    <tr><td class="m sub-u" style="text-align:left;width:9em">{{ (o.started or '')[:10] }}</td>
+        <td>{{ o.label }}</td><td class="m sub-u">{{ o.calls }} call{{ '' if o.calls == 1 else 's' }}</td>
+        <td class="m">{{ o.cost|usd }}</td></tr>
+    {% endfor %}
+  </table>
+  {% endif %}
+</section>

@@ -1,0 +1,74 @@
+{#- History: the versions first (each one viewed, compared with now, restored), then what it
+    cost, then what happened. The Costs tab is folded in here (operator, 2026-10-04). -#}
+<section class="panel">
+  <div class="panel-head"><h2 class="panel-title">Versions</h2><span class="hint">Every state of the text and the pictures is kept: each save, each change by a review, each revert and restore. Restoring one writes it back as the newest version; it is not an acceptance or a send.</span></div>
+  {% if not hist.versions %}
+  <div class="panel-body"><p class="hint">No version is recorded yet: the first one is kept before the next change.</p></div>
+  {% else %}
+  <ul class="versions">
+    {% for v in hist.versions %}
+    {% if v.review %}
+    <li class="v-group">
+      <details open>
+        <summary class="v-head"><span class="v-n">{{ icon("chevron-down", 14, cls="v-chev") }}</span><span class="v-what">{{ v.title }}</span><span class="hint">{{ v.when }}</span></summary>
+        <div class="hint v-detail">{{ v.detail }}</div>
+        <ul class="versions v-sub">
+        {% for x in v["items"] %}{% with v=x %}{% include "article/_version_row.html" %}{% endwith %}{% endfor %}
+        </ul>
+      </details>
+    </li>
+    {% else %}{% include "article/_version_row.html" %}{% endif %}
+    {% endfor %}
+  </ul>
+  {% endif %}
+</section>
+
+{% set c = hist.cost %}
+<section class="panel" id="costs">
+  <div class="panel-head"><h2 class="panel-title">What it cost</h2><span class="hint panel-aside">{{ c.total|usd }}{% if c.estimated %} (estimated){% endif %} since its first run</span></div>
+  {% if c.by_category %}
+  <div class="panel-body"><div class="legend">{% for p in c.by_category %}<span><i class="s{{ loop.index0 % 6 }}"></i>{{ p.label }} {{ p.cost|usd }}</span>{% endfor %}</div></div>
+  {% endif %}
+  {% if c.by_operation %}
+  <details class="panel-more">
+    <summary>Each operation ({{ c.by_operation|length }})</summary>
+    <table class="table">
+      <thead><tr><th>When</th><th>What</th><th class="num">Cost</th></tr></thead>
+      <tbody>{% for o in c.by_operation|reverse %}<tr><td class="hint">{{ o.started[:16].replace("T", " ") if o.started else "" }}</td><td>{{ o.label or o.op }}</td><td class="num">{{ o.cost|usd }}{% if o.estimated %} est.{% endif %}</td></tr>{% endfor %}</tbody>
+    </table>
+  </details>
+  {% endif %}
+  {% if c.estimated or c.limits %}<div class="panel-body"><p class="hint">{% if c.estimated %}Partly estimated: the article was written before costs were recorded, so its start is worked out from its run record; everything since is exact.{% endif %}{% if c.limits %} Not known: {{ c.limits|join("; ") }}.{% endif %}</p></div>{% endif %}
+  {% if c.unpriced %}<div class="panel-body"><p class="hint">Not priced: {% for u in c.unpriced %}{{ u.provider }} {{ u.units|units }}{{ "; " if not loop.last }}{% endfor %} (<a href="/settings/prices">Prices</a>).</p></div>{% endif %}
+</section>
+
+<section class="panel">
+  <div class="panel-head"><h2 class="panel-title">What happened</h2><span class="hint panel-aside">reviews, acceptances, sends, the post's reads</span></div>
+  {% if hist.events %}
+  <ul class="timeline">
+    {% for e in hist.events %}
+    <li><span class="when">{{ e.when }}</span><span class="dot is-{{ e.colour }}"></span><span class="what">{{ e.what }}{% if e.detail or e.who %}<span class="hint">{{ e.detail }}{{ " · " if e.detail and e.who }}{{ ("by " ~ e.who) if e.who }}</span>{% endif %}</span></li>
+    {% endfor %}
+  </ul>
+  {% else %}<div class="panel-body"><p class="hint">Nothing yet.</p></div>{% endif %}
+</section>
+
+{% if hist.old %}
+<details class="panel panel-more" data-old-checklist>
+  <summary id="old-checklist">The old checklist ({{ hist.old["items"]|length }} finding{{ "s" if hist.old["items"]|length != 1 }}{% if hist.old.open is not none %}, {{ hist.old.open }} open when it moved{% endif %}{% if hist.old.at %}, {{ hist.old.at }}{% endif %})</summary>
+  <div class="panel-body"><p class="hint">From the review before the new system, kept as it was for reading: nothing in it runs, and the new review does not carry it.</p></div>
+  <ul class="old-checklist">
+    {% for it in hist.old["items"] %}
+    <li><div><span class="label">{{ it.severity|capitalize }}</span>{% if it.section %}<span class="hint"> · {{ it.section }}</span>{% endif %}</div>
+      <p>{{ it.text }}</p><span class="hint">{{ it.state }}{% if it.id %} · <span class="id">{{ it.id }}</span>{% endif %}</span></li>
+    {% endfor %}
+  </ul>
+</details>
+{% endif %}
+
+{% call ui.dialog("restore-dialog", "Restore this version?", text="It is written back as the newest version; the version you see now stays in the list. It is not an acceptance or a send.") %}
+  <form method="post" id="restore-form">
+    <input type="hidden" name="version" value="{{ version }}">
+    <div class="dialog-actions">{{ ui.button("Cancel", "secondary", type="button", attrs={"data-dialog-close": ""}) }}{{ ui.button("Restore it", "primary") }}</div>
+  </form>
+{% endcall %}

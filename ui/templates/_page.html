@@ -1,0 +1,25 @@
+{#- The document every page is: the head, the toasts, the shell's script. base.html adds the
+    sidebar; the login card uses this alone. A page names itself with `page_title` set at its top
+    level ("Articles"), and the title reads "Articles · <project> · SEO Writer Agent". -#}
+{% import "_ui.html" as ui %}
+<!doctype html>
+<html lang="en" class="no-js">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{{ page_title ~ " · " if page_title }}{{ shell.project }}{{ " · " ~ shell.product if shell.project != shell.product }}</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20viewBox%3D%220%200%2032%2032%22%3E%3Crect%20width%3D%2232%22%20height%3D%2232%22%20rx%3D%227%22%20fill%3D%22%231F1E1B%22/%3E%3Cpath%20d%3D%22M9%2011h14M9%2016h14M9%2021h9%22%20stroke%3D%22%23fff%22%20stroke-width%3D%222.2%22%20stroke-linecap%3D%22round%22/%3E%3C/svg%3E">
+<link rel="stylesheet" href="{{ url_for('static', filename='tokens.css', v=asset_v('tokens.css')) }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='ui.css', v=asset_v('ui.css')) }}">
+{% block styles %}{% endblock %}
+<script>document.documentElement.className = "js";</script>
+</head>
+<body>
+{% block body %}{% endblock %}
+<div class="toasts" id="toasts" aria-live="polite">
+{%- for m in get_flashed_messages() %}{{ ui.toast(m) }}{% endfor -%}
+</div>
+<script src="{{ url_for('static', filename='js/ui.js', v=asset_v('js/ui.js')) }}" defer></script>
+{% block scripts %}{% endblock %}
+</body>
+</html>

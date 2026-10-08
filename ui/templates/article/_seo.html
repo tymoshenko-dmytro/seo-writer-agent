@@ -1,0 +1,72 @@
+{#- SEO: stacked fields at full width; the search preview follows them as they are typed, each
+    limited field shows its count against its range, the FAQ opens question by question; its own
+    Save, a version of its own; the keyword coverage reads as sentences. -#}
+{% if seo_refused %}{{ ui.banner(seo_refused, "yellow", icon_name="circle-alert") }}{% endif %}
+<form method="post" action="{{ base }}/seo" id="seo-form"{% if seo_refused %} data-dirty{% endif %}>
+<input type="hidden" name="version" value="{{ version }}">
+<section class="panel">
+  <div class="panel-head"><h2 class="panel-title">How it looks in search</h2><span class="hint panel-aside">the preview follows the fields</span></div>
+  <div class="panel-body">
+    <div class="serp" aria-live="polite">
+      <div class="serp-url">{{ seo.host }} › <span data-serp="slug">{{ seo.slug }}</span></div>
+      <div class="serp-title" data-serp="title">{{ seo.meta_title or "(no meta title)" }}</div>
+      <div class="serp-desc" data-serp="desc">{{ seo.meta_description or "(no meta description)" }}</div>
+    </div>
+  </div>
+  <div class="panel-body form-stack">
+    <div class="field">
+      <div class="field-top"><label class="label" for="seo-title">Meta title</label><span class="counter{{ ' is-over' if not (50 <= seo.meta_title|length <= 70) }}" data-count="seo-title" data-min="50" data-max="70">{{ seo.meta_title|length }} of 50–70</span></div>
+      <input class="input" id="seo-title" name="meta_title" data-live="title" value="{{ seo.meta_title }}">
+    </div>
+    <div class="field">
+      <div class="field-top"><label class="label" for="seo-desc">Meta description</label><span class="counter{{ ' is-over' if not (130 <= seo.meta_description|length <= 150) }}" data-count="seo-desc" data-min="130" data-max="150">{{ seo.meta_description|length }} of 130–150</span></div>
+      <textarea class="textarea" id="seo-desc" name="meta_description" data-live="desc" rows="3">{{ seo.meta_description }}</textarea>
+    </div>
+    <div class="field-pair">
+      <div class="field"><label class="label" for="seo-slug">Slug</label><input class="input is-mono" id="seo-slug" name="slug" data-live="slug" value="{{ seo.slug }}"><span class="hint">Changing it after a send changes the post's address.</span></div>
+      <div class="field"><label class="label" for="seo-kw">Focus keyword</label><input class="input" id="seo-kw" name="focus_keyword" value="{{ seo.focus_keyword }}"><span class="hint">Yoast's focus keyphrase on WordPress.</span></div>
+    </div>
+    {% if seo.problems %}<ul class="seo-problems">{% for p in seo.problems %}<li>{{ p }}</li>{% endfor %}</ul>{% endif %}
+  </div>
+</section>
+<section class="panel">
+  <div class="panel-head"><h2 class="panel-title">FAQ</h2><span class="hint panel-aside">{{ seo.faq|length }} question{{ "s" if seo.faq|length != 1 }}, shown under the article and sent to search as FAQ markup</span></div>
+  <div id="faq-list">
+  {% for q in seo.faq %}
+  <details class="faq-item">
+    <summary><span class="faq-q">{{ q.question if q.question is defined else q }}</span><span class="preview-line">{{ q.answer if q.answer is defined else "" }}</span>{{ icon("chevron-down", 16, cls="faq-chev") }}</summary>
+    <div class="form-stack">
+      <div class="field"><label class="label" for="faq-q-{{ loop.index }}">Question</label><input class="input" id="faq-q-{{ loop.index }}" name="faq_q" value="{{ q.question if q.question is defined else q }}"></div>
+      <div class="field"><label class="label" for="faq-a-{{ loop.index }}">Answer</label><textarea class="textarea" id="faq-a-{{ loop.index }}" name="faq_a" rows="4">{{ q.answer if q.answer is defined else "" }}</textarea></div>
+      <div>{{ ui.text_action("Delete this question", type="button", attrs={"data-faq-delete": ""}) }}</div>
+    </div>
+  </details>
+  {% endfor %}
+  </div>
+  <template id="faq-new">
+    <details class="faq-item" open>
+      <summary><span class="faq-q">A new question</span>{{ icon("chevron-down", 16, cls="faq-chev") }}</summary>
+      <div class="form-stack">
+        <label class="field"><span class="label">Question</span><input class="input" name="faq_q"></label>
+        <label class="field"><span class="label">Answer</span><textarea class="textarea" name="faq_a" rows="4"></textarea></label>
+        <div>{{ ui.text_action("Delete this question", type="button", attrs={"data-faq-delete": ""}) }}</div>
+      </div>
+    </details>
+  </template>
+  <div class="panel-foot">{{ ui.text_action("Add a question", type="button", attrs={"id": "faq-add"}) }}</div>
+</section>
+<div class="save-bar">
+  {% if version %}{{ ui.button("Save", "primary", attrs={"id": "seo-save"}) }}<span class="hint" id="seo-state">{% if seo_refused %}Not saved{% else %}Each save is a version of its own (History).{% endif %}</span>
+  {% else %}<span class="hint">The article changed while this page was read: reload it to save.</span>{% endif %}
+</div>
+</form>
+{% call ui.dialog("seo-leave", "Leave without saving?", text="The meta tags or the FAQ changed and are not saved. Leaving drops the changes.") %}
+  <div class="dialog-actions">{{ ui.button("Keep editing", "secondary", type="button", attrs={"data-dialog-close": ""}) }}{{ ui.button("Leave without saving", "danger", type="button", attrs={"id": "seo-leave-go"}) }}</div>
+{% endcall %}
+<section class="panel">
+  <div class="panel-head"><h2 class="panel-title">Keyword coverage</h2><span class="hint panel-aside">the keyword report{% if seo.verdict %}: {{ {"ok": "every check passes", "warn": "some below our target", "fail": "a hard rule fails"}.get(seo.verdict, seo.verdict) }}{% endif %}{% if seo.stale %} · measured on an earlier version of the text: rebuild it below{% endif %}</span></div>
+  {% for c in seo.checks %}
+  <div class="panel-row is-wide"><div><span class="label">{{ c.name }}</span><span class="hint">{{ c.detail }}</span></div>{{ ui.status({"ok": "in range", "warn": "below our target", "fail": "fails"}.get(c.status, c.status), {"ok": "green", "warn": "yellow", "fail": "red"}.get(c.status, "gray"), quiet=(c.status == "ok")) }}</div>
+  {% else %}<div class="panel-body"><p class="hint">No keyword report yet.</p></div>{% endfor %}
+  <div class="panel-foot"><form method="post" action="{{ base }}/keywords" class="inline">{{ ui.text_action("Rebuild the keyword report") }}</form><span class="hint">Free: it reads the text again, no model call.</span></div>
+</section>

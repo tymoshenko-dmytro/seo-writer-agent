@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+{% import "_ui.html" as ui %}
+{% set page_title = "Publishing" %}
+{% block content %}
+{{ ui.page_header("Publishing", sub="What happens when you accept a version, and where new posts go.") }}
+{% if migrated %}
+<div class="banner is-yellow" role="status">{{ icon("circle-alert") }}<span class="banner-text">Before this release, <b>When an article passes every check</b> was set to
+  <b>{{ {'publish': 'Publish it on the blog', 'draft': 'Create a WordPress draft', 'none': 'Nothing without a person'}.get(migrated.on_ready, migrated.on_ready) }}</b>.
+  That setting is gone: nothing is sent when the checks pass. <b>When you accept a version</b> starts at <b>Nothing</b>, whatever the old one said.</span>
+  <form method="post" action="/settings/migrated/dismiss" class="inline">{{ ui.text_action("Got it") }}</form></div>
+{% endif %}
+<form method="post" action="/settings/publishing">
+  <section class="panel">
+    <div class="panel-head"><h2 class="panel-title">When you accept a version</h2><span class="hint">Accept is your mark that you looked at this version and it is good. This says what the button also does; its label says it too. A live post is only ever updated by a button named Update the live post.</span></div>
+    <div class="panel-body">
+      <div class="choices">
+        {% for value, name in accept_field.choices %}
+        <label class="choice"><input type="radio" name="publishing.on_accept" value="{{ value }}" {{ 'checked' if current['publishing.on_accept'] == value }}><span><span class="label">{{ name }}</span><span class="hint">{{ {"none": "Accept only marks the version as looked at.", "draft": "Accept also sends the version to the WordPress draft: a new draft, or the one it has.", "publish": "Accept also publishes it on the blog, or updates the live post."}.get(value, "") }}</span></span></label>
+        {% endfor %}
+      </div>
+    </div>
+  </section>
+  <section class="panel">
+    <div class="panel-head"><h2 class="panel-title">Where new posts go</h2></div>
+    <div class="panel-row">
+      <div><label class="label" for="publishing.category">The category</label><span class="hint">A new post sent from the Studio is filed under it.{% if not site_categories %} The categories come from the site after <a href="/settings/keys#wordpress">Test the connection</a>.{% endif %}</span></div>
+      <select class="select" name="publishing.category" id="publishing.category">
+        <option value="">No category (WordPress files it under its default)</option>
+        {% for c in categories %}<option value="{{ c }}" {{ 'selected' if current['publishing.category'] == c }}>{{ c }}</option>{% endfor %}
+      </select>
+    </div>
+    <div class="panel-row">
+      <div><span class="label">The author</span><span class="hint">The byline the posts carry. Picked from the site's users in <a href="/settings/keys#wordpress">Connections</a>.</span></div>
+      <span>{{ author or "the user the application password belongs to" }}</span>
+    </div>
+  </section>
+  <div class="save-bar">{{ ui.button("Save", "primary") }}<span class="hint">Applies to the next Accept and the next send.</span></div>
+</form>
+{% endblock %}

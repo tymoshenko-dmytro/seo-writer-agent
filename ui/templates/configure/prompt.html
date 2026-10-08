@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+{% import "_ui.html" as ui %}
+{#- One agent's prompt: the editable part, the slots it must keep (where each value comes from),
+    and the answer format the code reads, shown read-only under it: it always runs as shipped. -#}
+{% set page_title = label ~ " prompt" %}
+{% block content %}
+<a class="crumb" href="/settings/prompts">{{ icon("arrow-left", 14) }}Prompts</a>
+<header class="page-header">
+  <div class="page-heading"><h1 class="page-title">{{ label }}</h1></div>
+  <p class="page-meta">{{ help }}<span class="sep">·</span>{{ "edited by your team" if changed else "the original" }}</p>
+</header>
+{% if slots %}
+<p class="hint text-help">Filled in when the agent runs; keep each in the text, written exactly like this (a save without one is refused):
+  {% for s in slots %}<span class="slot">{{ '{{' }}{{ s.name }}{{ '}}' }}</span> ({% if s.code %}{{ s.code }}{% elif s.label %}<a href="/settings/project/{{ s.name }}">{{ s.label }}</a> in Project{% else %}filled by the pipeline{% endif %}){{ ", " if not loop.last }}{% endfor %}.</p>
+{% endif %}
+<form method="post" action="/settings/prompts/{{ name }}" class="text-edit">
+  <textarea class="textarea is-code" name="text" rows="30" spellcheck="false" aria-label="The prompt">{{ text }}</textarea>
+  {% if contract %}
+  <div class="code-label" id="output-contract">{{ icon("ban", 14) }}The answer format the code reads. It always runs as shipped, so it is not edited here.</div>
+  <div class="code-block">{{ contract }}</div>
+  {% endif %}
+  <div class="save-bar">
+    {{ ui.button("Save the prompt", "primary") }}
+    {% if changed %}{{ ui.button("Restore original", "ghost", name="action", value="reset", attrs={"data-confirm": "Restore the original prompt? Your edit is deleted."}) }}{% endif %}
+    <span class="hint">{% if changed %}Your team's edit, kept with the articles.{% else %}The original that ships with the app.{% endif %}</span>
+  </div>
+</form>
+{% endblock %}
+{% block scripts %}<script src="{{ url_for('static', filename='js/configure.js', v=asset_v('js/configure.js')) }}" defer></script>{% endblock %}

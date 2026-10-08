@@ -1,0 +1,48 @@
+{#- Publish: what the checks say before a send (each as what it is: found, clear, not checked,
+    could not run; none blocks a send), the sends at full size, each confirmed in a dialog that
+    names the post, and the log of sends. The uniqueness check sits at the bottom. -#}
+{% set words = {"found": ("found", "yellow", False), "clear": ("clear", "green", True), "not_checked": ("not checked", "gray", True), "failed": ("could not run", "red", False)} %}
+<section class="panel">
+  <div class="panel-head"><h2 class="panel-title">Before a send</h2><span class="hint panel-aside">what the checks say about this version; nothing here blocks a send</span></div>
+  <ul class="checks">
+    {% for c in checks %}{% set w = words.get(c.state, (c.state, "gray", True)) %}
+    <li><span class="label">{{ c.check[0]|upper ~ c.check[1:] }}</span><span class="hint">{{ c.detail }}</span>{{ ui.status(w[0], w[1], quiet=w[2]) }}</li>
+    {% endfor %}
+  </ul>
+</section>
+<section class="panel">
+  <div class="panel-head"><h2 class="panel-title">Send</h2>
+    <span class="hint panel-aside">{% if rail.post.live %}The post #{{ rail.post.post_id }} is live: people read it now. A send replaces its text with this version.{% elif rail.post.post_id %}The draft #{{ rail.post.post_id }} on WordPress.{% else %}Nothing is on WordPress yet.{% endif %}</span></div>
+  <div class="panel-foot send-actions">
+    {% if not version %}<p class="hint">The article changed while this page was read: reload it to send what is there now.</p>
+    {% else %}
+    {% for action, label in options %}
+      {{ ui.dialog_button("send-" ~ action, label, "secondary" if action != "unpublish" else "ghost", icon_name="send" if action != "unpublish" else None, fallback="#send-" ~ action) }}
+    {% endfor %}
+    {% endif %}
+  </div>
+</section>
+{% set found = checks|selectattr("state", "equalto", "found")|list|length %}
+{% set unchecked = checks|selectattr("state", "equalto", "not_checked")|list|length %}
+{% set failed = checks|selectattr("state", "equalto", "failed")|list|length %}
+{% for action, label in options %}
+{% call ui.dialog("send-" ~ action, label ~ "?", text=("The checks above: " ~ found ~ " found, " ~ unchecked ~ " not checked, " ~ failed ~ " could not run. ") ~ ("People read this post now." if rail.post.live else "")) %}
+  <form method="post" action="{{ base }}/publish" class="dialog-actions">
+    <input type="hidden" name="version" value="{{ version }}"><input type="hidden" name="action" value="{{ action }}"><input type="hidden" name="post" value="{{ rail.post.post_id or '' }}">
+    {{ ui.button("Cancel", "secondary", type="button", attrs={"data-dialog-close": ""}) }}{{ ui.button(label, "primary" if action != "unpublish" else "danger") }}
+  </form>
+{% endcall %}
+{% endfor %}
+<section class="panel">
+  <div class="panel-head"><h2 class="panel-title">Sends</h2></div>
+  {% if sends %}
+  <ul class="checks">
+    {% for s in sends %}
+    <li><span class="hint">{{ s.when }}</span><span><span class="label">{{ {"draft": "Sent as a draft", "publish": "Published on the blog", "update_live": "Updated the live post", "unpublish": "Taken off the blog"}.get(s.action, s.action) }}</span><span class="hint">{% if s.by %}by {{ s.by }}{% endif %}</span></span>{{ ui.status("Sent" if s.outcome == "sent" else s.outcome|capitalize, "green" if s.outcome == "sent" else "red", quiet=(s.outcome == "sent")) }}</li>
+    {% endfor %}
+  </ul>
+  {% else %}<div class="panel-body"><p class="hint">Nothing sent from the Studio yet.</p></div>{% endif %}
+</section>
+<div class="section-foot">
+  <form method="post" action="{{ base }}/uniqueness" class="inline">{{ ui.text_action("Check the uniqueness", cost="Winston credits, about 2 a word") }}</form>
+</div>

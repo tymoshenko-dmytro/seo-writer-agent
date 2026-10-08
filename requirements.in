@@ -1,0 +1,32 @@
+# Direct dependencies with the ranges we support. requirements.txt is the locked set built from
+# these (exact versions of everything, transitive included) and is what the image installs.
+# To upgrade: edit a range here, install into a clean venv, run the tests, then
+#   .venv/bin/pip freeze --exclude-editable > requirements.txt
+# Python 3.14 (local and in the Docker image).
+
+# Orchestration
+langgraph>=1.2,<2
+
+# LLM + research
+anthropic>=1.0,<2
+parallel-web>=1.1,<2
+httpx>=0.28,<1          # Ahrefs MCP transport
+
+# Rendering / publishing
+markdown-it-py>=4,<5
+flask>=3.1,<4
+gunicorn>=23,<24
+requests>=2.32,<3
+
+# Visuals
+matplotlib>=3.10,<4
+numpy>=2,<3
+pillow>=11,<13
+playwright==1.61.0      # pinned: the image downloads the Chromium build that matches this exact
+                        # version, and a floating range once pulled a new release whose browser
+                        # download timed out on the GitLab runner
+
+# Config / utils
+pyyaml>=6,<7
+pydantic>=2,<3
+python-dotenv>=1,<2

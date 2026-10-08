@@ -1,0 +1,17 @@
+{#- Sources: how the article was made, each step's report, folded; the run's log at the end. -#}
+<section class="panel">
+  <div class="panel-head"><h2 class="panel-title">How this article was made</h2><span class="hint panel-aside">what each step found and used; open one to read it</span></div>
+  {% for s in stages %}
+  <details class="trail"><summary><span class="label">{{ s.label }}</span><span class="hint">{{ s.hint }}</span></summary><div class="trail-body prose">{{ s.html|safe }}</div></details>
+  {% else %}<div class="panel-body"><p class="hint">No report of the run is kept for this article.</p></div>{% endfor %}
+  {% if edited and (edited.prompts or edited.texts) %}
+  <div class="panel-foot"><span class="hint">The run worked from what was edited in the Studio:{% if edited.prompts %} the prompts of {{ edited.prompts|join(", ") }}{% endif %}{% if edited.prompts and edited.texts %};{% endif %}{% if edited.texts %} the project's {{ edited.texts|join(", ")|lower }}{% endif %} (Configure).</span></div>
+  {% endif %}
+</section>
+{% if log %}
+<details class="panel panel-more">
+  <summary>The run's log ({{ log|length }} lines)</summary>
+  <pre class="log">{% for line in log %}{{ line }}
+{% endfor %}</pre>
+</details>
+{% endif %}

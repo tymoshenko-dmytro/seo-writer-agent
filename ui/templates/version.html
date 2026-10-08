@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% import "_ui.html" as ui %}
+{#- One version of the article, as it read, and what changed from it to now: Restore writes it back as the newest version. -#}
+{% set page_title = "v" ~ view.v.n ~ " · " ~ title %}
+{% set base = "/a/" ~ slug %}
+{% block content %}
+<a class="crumb" href="{{ base }}?tab=history">{{ icon("arrow-left", 14) }}History</a>
+<header class="page-header">
+  <div class="page-heading"><h1 class="page-title">v{{ view.v.n }} · {{ view.v.what }}</h1></div>
+  <p class="page-meta">{{ view.v.who }}<span class="sep">·</span>{{ view.when }}{% if view.v.detail %}<span class="sep">·</span>{{ view.v.detail }}{% endif %}</p>
+</header>
+
+<section class="panel" id="compare">
+  <div class="panel-head"><h2 class="panel-title">What changed from v{{ view.v.n }} to now</h2>
+    <span class="hint panel-aside">{% set c = view.compare %}{{ c.blocks|length }} block{{ "s" if c.blocks|length != 1 }} of the text{% if c.frontmatter_changed %}, the meta fields{% endif %}{% if c.pictures %}, {{ c.pictures|length }} picture{{ "s" if c.pictures|length != 1 }}{% endif %}</span></div>
+  {% if not c.blocks and not c.frontmatter_changed and not c.pictures %}
+  <div class="panel-body"><p class="hint">Nothing: this version reads as the article does now.</p></div>
+  {% endif %}
+  {% for b in c.blocks %}
+  <div class="panel-body"><div class="change-text">{{ b.before|word_diff(b.after) }}</div></div>
+  {% endfor %}
+  {% if c.pictures %}<div class="panel-body"><p class="hint">Pictures that differ: {{ c.pictures|join(", ") }}</p></div>{% endif %}
+  <div class="panel-foot" id="restore">
+    {% if version and view.v.n != current %}
+    <form method="post" action="{{ base }}/v/{{ view.v.n }}/restore" class="inline">
+      <input type="hidden" name="version" value="{{ version }}">
+      {{ ui.button("Restore this version", "secondary", icon_name="undo-2") }}
+    </form>
+    <span class="hint">It becomes the newest version; nothing is lost. It is not an acceptance or a send.</span>
+    {% elif view.v.n == current %}<span class="hint">This is the version the article has now.</span>{% endif %}
+  </div>
+</section>
+
+<h2 class="group-title">v{{ view.v.n }} as it read</h2>
+<article class="prose">{{ view.html|safe }}</article>
+{% endblock %}

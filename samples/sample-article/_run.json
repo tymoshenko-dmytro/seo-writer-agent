@@ -1,0 +1,873 @@
+{
+  "started_at": "2026-10-08T09:31:45+00:00",
+  "topic": "how to write a meta description",
+  "slug": "how-to-write-a-meta-description",
+  "status": "success",
+  "cost": {
+    "total": 0.0,
+    "calls": 5,
+    "by_category": [],
+    "by_provider": [
+      {
+        "key": "anthropic",
+        "label": "Anthropic",
+        "cost": 0.0,
+        "calls": 5,
+        "units": {}
+      }
+    ],
+    "by_operation": [
+      {
+        "op": "generation",
+        "label": "Generation",
+        "started": "2026-10-08T09:31:45+00:00",
+        "cost": 0.0,
+        "calls": 5,
+        "estimated": false,
+        "id": "800cd48ba6"
+      }
+    ],
+    "unpriced": [
+      {
+        "provider": "anthropic",
+        "item": "stand-in",
+        "units": {},
+        "calls": 5
+      }
+    ],
+    "estimated": false
+  },
+  "keyword_research": {
+    "topic": "how to write a meta description",
+    "country": "us",
+    "primary_keyword": "meta description",
+    "primary_stats": {},
+    "analysis": {
+      "search_intent": "informational",
+      "secondary_keywords": [
+        "meta description length",
+        "how to write a meta description"
+      ]
+    },
+    "related": [
+      {
+        "keyword": "meta description length"
+      },
+      {
+        "keyword": "how to write a meta description"
+      },
+      {
+        "keyword": "meta description examples"
+      },
+      {
+        "keyword": "seo meta description"
+      },
+      {
+        "keyword": "meta description best practices"
+      },
+      {
+        "keyword": "what is a meta description"
+      }
+    ],
+    "lsi": [
+      {
+        "keyword": "search results"
+      },
+      {
+        "keyword": "snippet"
+      },
+      {
+        "keyword": "title tag"
+      },
+      {
+        "keyword": "search intent"
+      },
+      {
+        "keyword": "character limit"
+      },
+      {
+        "keyword": "click"
+      }
+    ],
+    "questions": [
+      "How long should a meta description be?",
+      "Does Google always use the meta description?",
+      "Do meta descriptions affect rankings?"
+    ],
+    "mandatory_keywords": [],
+    "clusters_ranked": [],
+    "meta": {
+      "meta_title": "Meta Description Guide: Length, Patterns and Common Mistakes",
+      "meta_description": "Learn how to write a meta description that earns the click: how long it should be, five patterns that work, and the mistakes to avoid.",
+      "problems": []
+    },
+    "content_benchmark": {
+      "images_median": 3,
+      "sample": 3,
+      "words_min": 820,
+      "words_median": 1000,
+      "words_max": 1250,
+      "words_target": 1000
+    },
+    "prototypes": [],
+    "stand_in": true
+  },
+  "brief": {
+    "title": "How to Write a Meta Description That Earns the Click",
+    "meta_title": "Meta Description Guide: Length, Patterns and Common Mistakes",
+    "meta_description": "Learn how to write a meta description that earns the click: how long it should be, five patterns that work, and the mistakes to avoid.",
+    "search_intent": "informational",
+    "target_words": 1000,
+    "serp_notes": "Made up for the stand-in run.",
+    "sections": [
+      {
+        "h2": "What a meta description does",
+        "words": 200,
+        "intent": "What a meta description does",
+        "keywords": [
+          "what is a meta description"
+        ],
+        "content_types": [],
+        "h3": []
+      },
+      {
+        "h2": "How long a meta description should be",
+        "words": 200,
+        "intent": "How long a meta description should be",
+        "keywords": [
+          "meta description length"
+        ],
+        "content_types": [
+          "chart: the length of the example descriptions"
+        ],
+        "h3": []
+      },
+      {
+        "h2": "Patterns that make a description worth clicking",
+        "words": 250,
+        "intent": "Patterns that make a description worth clicking",
+        "keywords": [
+          "meta description examples"
+        ],
+        "content_types": [
+          "comparison table: pattern, when it fits, example"
+        ],
+        "h3": []
+      },
+      {
+        "h2": "Mistakes that waste the snippet",
+        "words": 200,
+        "intent": "Mistakes that waste the snippet",
+        "keywords": [
+          "meta description best practices"
+        ],
+        "content_types": [],
+        "h3": []
+      },
+      {
+        "h2": "A check before you publish",
+        "words": 150,
+        "intent": "A check before you publish",
+        "keywords": [
+          "seo meta description"
+        ],
+        "content_types": [
+          "checklist"
+        ],
+        "h3": []
+      }
+    ],
+    "faq": [
+      "How long should a meta description be?",
+      "Does Google always use the meta description?"
+    ],
+    "research_questions": [
+      "What does Google's documentation say about meta descriptions and snippets?"
+    ]
+  },
+  "research": {
+    "findings": [
+      {
+        "question": "What does Google's documentation say about meta descriptions and snippets?",
+        "confidence": "high",
+        "summary": "Google sometimes uses the meta description for the snippet; there is no length limit, but snippets are truncated to fit the device; descriptions should be unique and readable.",
+        "facts": [
+          {
+            "claim": "Google sometimes uses the meta description if it describes the page more accurately than text taken from the page",
+            "source_url": "https://developers.google.com/search/docs/appearance/snippet"
+          },
+          {
+            "claim": "There is no limit on how long a meta description can be; the snippet is truncated as needed, typically to fit the device width",
+            "source_url": "https://developers.google.com/search/docs/appearance/snippet"
+          },
+          {
+            "claim": "Identical or similar descriptions on every page are not helpful in search results",
+            "source_url": "https://developers.google.com/search/docs/appearance/snippet"
+          },
+          {
+            "claim": "Descriptions made of long strings of keywords do not give users a clear idea of the page's content",
+            "source_url": "https://developers.google.com/search/docs/appearance/snippet"
+          },
+          {
+            "claim": "The nosnippet rule prevents a snippet; max-snippet sets its maximum length",
+            "source_url": "https://developers.google.com/search/docs/appearance/snippet"
+          }
+        ]
+      }
+    ],
+    "key_statistics": [],
+    "sources": [
+      {
+        "url": "https://developers.google.com/search/docs/appearance/snippet",
+        "title": "Control your snippets in search results (Google Search Central)"
+      }
+    ],
+    "gaps": []
+  },
+  "visuals": [
+    {
+      "type": "chart",
+      "status": "generated",
+      "path": "assets/chart_1.png",
+      "caption": "The length of the five example descriptions in this guide, in characters",
+      "spec": {
+        "type": "hbar",
+        "title": "The five example descriptions, in characters",
+        "unit": ""
+      }
+    },
+    {
+      "type": "cover",
+      "status": "generated",
+      "path": "assets/cover.png",
+      "headline": "Meta Description"
+    }
+  ],
+  "qa_state": {
+    "project_edits": [],
+    "prompt_edits": []
+  },
+  "keywords": {
+    "article_words": 851,
+    "primary": {
+      "keyword": "meta description",
+      "words": 2,
+      "h1": 1,
+      "headings": 2,
+      "body": 6,
+      "alt": 2,
+      "meta": 2,
+      "total": 9,
+      "close": 0,
+      "scattered_body": 1,
+      "headings_hit": [
+        "What a meta description does",
+        "How long a meta description should be"
+      ],
+      "density": 2.12,
+      "in_opening": true
+    },
+    "thresholds": {
+      "primary_min_total": 3,
+      "primary_density_min": 0.5,
+      "primary_density_max": 2.5,
+      "primary_in_h1": true,
+      "primary_in_headings_min": 1,
+      "primary_in_first_words": 100,
+      "secondary_coverage_min": 50,
+      "lsi_coverage_min": 30,
+      "section_keyword_coverage_min": 50
+    },
+    "zones": {
+      "h1_words": 10,
+      "heading_count": 5,
+      "body_words": 812,
+      "alt_words": 35,
+      "meta_words": 33
+    },
+    "groups": {
+      "mandatory": {
+        "label": "Mandatory keywords (set by SEO)",
+        "rows": [],
+        "covered": 0,
+        "total": 0,
+        "coverage": 0.0,
+        "min": 100
+      },
+      "secondary": {
+        "label": "Secondary targets",
+        "rows": [
+          {
+            "keyword": "meta description length",
+            "words": 3,
+            "h1": 0,
+            "headings": 0,
+            "body": 1,
+            "alt": 0,
+            "meta": 0,
+            "total": 1,
+            "close": 0,
+            "scattered_body": 0,
+            "headings_hit": [],
+            "section": "How long a meta description should be",
+            "priority": "desired"
+          },
+          {
+            "keyword": "how to write a meta description",
+            "words": 6,
+            "h1": 1,
+            "headings": 0,
+            "body": 0,
+            "alt": 0,
+            "meta": 1,
+            "total": 1,
+            "close": 0,
+            "scattered_body": 0,
+            "headings_hit": [],
+            "priority": "desired"
+          }
+        ],
+        "covered": 2,
+        "total": 2,
+        "coverage": 100.0,
+        "min": 50
+      },
+      "sections": {
+        "label": "Brief section keywords",
+        "rows": [
+          {
+            "keyword": "what is a meta description",
+            "words": 5,
+            "h1": 0,
+            "headings": 0,
+            "body": 0,
+            "alt": 0,
+            "meta": 0,
+            "total": 0,
+            "close": 0,
+            "scattered_body": 0,
+            "headings_hit": [],
+            "section": "What a meta description does",
+            "priority": "desired"
+          },
+          {
+            "keyword": "meta description length",
+            "words": 3,
+            "h1": 0,
+            "headings": 0,
+            "body": 1,
+            "alt": 0,
+            "meta": 0,
+            "total": 1,
+            "close": 0,
+            "scattered_body": 0,
+            "headings_hit": [],
+            "section": "How long a meta description should be",
+            "priority": "desired"
+          },
+          {
+            "keyword": "meta description examples",
+            "words": 3,
+            "h1": 0,
+            "headings": 0,
+            "body": 0,
+            "alt": 0,
+            "meta": 0,
+            "total": 0,
+            "close": 0,
+            "scattered_body": 0,
+            "headings_hit": [],
+            "section": "Patterns that make a description worth clicking",
+            "priority": "desired"
+          },
+          {
+            "keyword": "meta description best practices",
+            "words": 4,
+            "h1": 0,
+            "headings": 0,
+            "body": 0,
+            "alt": 0,
+            "meta": 0,
+            "total": 0,
+            "close": 0,
+            "scattered_body": 0,
+            "headings_hit": [],
+            "section": "Mistakes that waste the snippet",
+            "priority": "desired"
+          },
+          {
+            "keyword": "seo meta description",
+            "words": 3,
+            "h1": 0,
+            "headings": 0,
+            "body": 0,
+            "alt": 0,
+            "meta": 0,
+            "total": 0,
+            "close": 0,
+            "scattered_body": 0,
+            "headings_hit": [],
+            "section": "A check before you publish",
+            "priority": "desired"
+          }
+        ],
+        "covered": 1,
+        "total": 5,
+        "coverage": 20.0,
+        "min": 50
+      },
+      "lsi": {
+        "label": "LSI vocabulary",
+        "rows": [
+          {
+            "keyword": "search results",
+            "words": 2,
+            "h1": 0,
+            "headings": 0,
+            "body": 3,
+            "alt": 0,
+            "meta": 0,
+            "total": 3,
+            "close": 0,
+            "scattered_body": 0,
+            "headings_hit": [],
+            "priority": "desired"
+          },
+          {
+            "keyword": "snippet",
+            "words": 1,
+            "h1": 0,
+            "headings": 1,
+            "body": 6,
+            "alt": 0,
+            "meta": 0,
+            "total": 7,
+            "close": 0,
+            "scattered_body": 0,
+            "headings_hit": [
+              "Mistakes that waste the snippet"
+            ],
+            "priority": "desired"
+          },
+          {
+            "keyword": "title tag",
+            "words": 2,
+            "h1": 0,
+            "headings": 0,
+            "body": 0,
+            "alt": 0,
+            "meta": 0,
+            "total": 0,
+            "close": 0,
+            "scattered_body": 0,
+            "headings_hit": [],
+            "priority": "desired"
+          },
+          {
+            "keyword": "search intent",
+            "words": 2,
+            "h1": 0,
+            "headings": 0,
+            "body": 0,
+            "alt": 0,
+            "meta": 0,
+            "total": 0,
+            "close": 0,
+            "scattered_body": 0,
+            "headings_hit": [],
+            "priority": "desired"
+          },
+          {
+            "keyword": "character limit",
+            "words": 2,
+            "h1": 0,
+            "headings": 0,
+            "body": 0,
+            "alt": 0,
+            "meta": 0,
+            "total": 0,
+            "close": 0,
+            "scattered_body": 0,
+            "headings_hit": [],
+            "priority": "desired"
+          },
+          {
+            "keyword": "click",
+            "words": 1,
+            "h1": 1,
+            "headings": 0,
+            "body": 6,
+            "alt": 0,
+            "meta": 1,
+            "total": 7,
+            "close": 0,
+            "scattered_body": 0,
+            "headings_hit": [],
+            "priority": "desired"
+          }
+        ],
+        "covered": 3,
+        "total": 6,
+        "coverage": 50.0,
+        "min": 30
+      },
+      "pool": {
+        "label": "Ranked keyword pool",
+        "rows": [
+          {
+            "keyword": "meta description length",
+            "words": 3,
+            "h1": 0,
+            "headings": 0,
+            "body": 1,
+            "alt": 0,
+            "meta": 0,
+            "total": 1,
+            "close": 0,
+            "scattered_body": 0,
+            "headings_hit": [],
+            "section": "How long a meta description should be",
+            "priority": "desired"
+          },
+          {
+            "keyword": "how to write a meta description",
+            "words": 6,
+            "h1": 1,
+            "headings": 0,
+            "body": 0,
+            "alt": 0,
+            "meta": 1,
+            "total": 1,
+            "close": 0,
+            "scattered_body": 0,
+            "headings_hit": [],
+            "priority": "desired"
+          },
+          {
+            "keyword": "meta description examples",
+            "words": 3,
+            "h1": 0,
+            "headings": 0,
+            "body": 0,
+            "alt": 0,
+            "meta": 0,
+            "total": 0,
+            "close": 0,
+            "scattered_body": 0,
+            "headings_hit": [],
+            "section": "Patterns that make a description worth clicking",
+            "priority": "desired"
+          },
+          {
+            "keyword": "seo meta description",
+            "words": 3,
+            "h1": 0,
+            "headings": 0,
+            "body": 0,
+            "alt": 0,
+            "meta": 0,
+            "total": 0,
+            "close": 0,
+            "scattered_body": 0,
+            "headings_hit": [],
+            "section": "A check before you publish",
+            "priority": "desired"
+          },
+          {
+            "keyword": "meta description best practices",
+            "words": 4,
+            "h1": 0,
+            "headings": 0,
+            "body": 0,
+            "alt": 0,
+            "meta": 0,
+            "total": 0,
+            "close": 0,
+            "scattered_body": 0,
+            "headings_hit": [],
+            "section": "Mistakes that waste the snippet",
+            "priority": "desired"
+          },
+          {
+            "keyword": "what is a meta description",
+            "words": 5,
+            "h1": 0,
+            "headings": 0,
+            "body": 0,
+            "alt": 0,
+            "meta": 0,
+            "total": 0,
+            "close": 0,
+            "scattered_body": 0,
+            "headings_hit": [],
+            "section": "What a meta description does",
+            "priority": "desired"
+          }
+        ],
+        "covered": 2,
+        "total": 6,
+        "coverage": 33.3,
+        "min": null,
+        "informational": true
+      }
+    },
+    "checks": [
+      {
+        "name": "Primary keyword in the H1",
+        "status": "ok",
+        "detail": "'meta description' appears 1× in the H1"
+      },
+      {
+        "name": "Primary keyword in H2/H3",
+        "status": "ok",
+        "detail": "2 heading(s) carry it (want ≥1): 'What a meta description does'; 'How long a meta description should be'"
+      },
+      {
+        "name": "Primary keyword in the opening",
+        "status": "ok",
+        "detail": "found in the first 100 words of body prose"
+      },
+      {
+        "name": "Primary keyword count",
+        "status": "ok",
+        "detail": "9 occurrence(s) across H1, headings and body (want ≥3)"
+      },
+      {
+        "name": "Primary keyword density",
+        "status": "ok",
+        "detail": "2.12% (ceiling 2.5%; for reference our comfortable floor is 0.5%)"
+      },
+      {
+        "name": "Secondary targets coverage",
+        "status": "ok",
+        "detail": "2/2 present (100.0%, want ≥50%)"
+      },
+      {
+        "name": "Brief section keywords coverage",
+        "status": "warn",
+        "detail": "1/5 present (20.0%, want ≥50%)"
+      },
+      {
+        "name": "LSI vocabulary coverage",
+        "status": "ok",
+        "detail": "3/6 present (50.0%, want ≥30%)"
+      }
+    ],
+    "verdict": "warn",
+    "failed": 0,
+    "warned": 1,
+    "slug": "how-to-write-a-meta-description",
+    "revision": "a10ba914ecc3b91c"
+  },
+  "uniqueness": {},
+  "log": [
+    "[init] topic='how to write a meta description' slug='how-to-write-a-meta-description' use_ahrefs=True",
+    "[keywords] stand-in keyword research",
+    "[brief] structure OK: 5 H2, 0 H3",
+    "[brief] meta OK (60/134 ch, 0 repair round(s))",
+    "[brief] sections=5 target_words=1000 research_questions=1",
+    "[research] stand-in research: 1 source",
+    "[copywriter] NO internal link index — article will ship without internal links",
+    "[copywriter] draft ~916 words, 1 cited links, faq=2",
+    "[visuals] enrichment proposed 1, placed 1",
+    "[visuals] enrichment added 1 marker(s) (had 2, target 3)",
+    "[visuals] generated=2 skipped=0 pending(cover/illustration)=0",
+    "[keywords] warn — 0 failed, 1 to review; primary 'meta description' x9",
+    "[uniqueness] skipped (no WINSTON_API_KEY or disabled in settings)",
+    "[finalize] status=success problems=[] -> <data>/out/how-to-write-a-meta-description/article.md",
+    "[review] review r1: 2 need you, 2 fixed by the machine"
+  ],
+  "schema": 3,
+  "review": {
+    "reviews": [
+      {
+        "id": "r1",
+        "at": "2026-10-08T09:31:46+00:00",
+        "version": "34f0f776bbf72b14",
+        "version_n": 1,
+        "valid": true,
+        "valid_reads": 3,
+        "reads_requested": 3,
+        "models": [
+          "claude-opus-5-5",
+          "claude-sonnet-5-5",
+          "openai:gpt-5.6-sol"
+        ],
+        "picture_check": {
+          "ran": true,
+          "looked_at": [
+            "assets/cover.png",
+            "assets/chart_1.png",
+            "assets/infographic_1.png"
+          ],
+          "could_not": [],
+          "words": {
+            "assets/cover.png": "adc83b19e793491b",
+            "assets/chart_1.png": "16e0005cceb83c64",
+            "assets/infographic_1.png": "18d174a4c28bc7d4"
+          }
+        }
+      }
+    ],
+    "findings": [
+      {
+        "id": "r1-1",
+        "text": "The sentence 'Google may rewrite the snippet anyway, but a careful description is what it shows when the page and the tag agree.' repeats the point of the first section. Cut it here.",
+        "kind": "text",
+        "action": "edit",
+        "target": {
+          "quote": "Google may rewrite the snippet anyway, but a careful description is what it shows when the page and the tag agree."
+        },
+        "phrase": null,
+        "severity": "minor",
+        "status": "changed",
+        "closed": null,
+        "source": "reader",
+        "review": "r1",
+        "section": "Mistakes that waste the snippet",
+        "basis": "other",
+        "check": "structure",
+        "needs_choice": null,
+        "voices": [
+          "read0:claude-opus-5-5",
+          "read1:claude-sonnet-5-5",
+          "read2:openai:gpt-5.6-sol"
+        ],
+        "note": null,
+        "note_plain": null,
+        "tried": 1
+      },
+      {
+        "id": "r1-2",
+        "text": "The section 'Patterns that make a description worth clicking' does not use the phrase 'meta description examples'. Reword its first sentence to carry it.",
+        "kind": "keyword",
+        "action": "insert_keyword",
+        "target": {
+          "heading": "Patterns that make a description worth clicking"
+        },
+        "phrase": "meta description examples",
+        "severity": "minor",
+        "status": "changed",
+        "closed": null,
+        "source": "reader",
+        "review": "r1",
+        "section": "Patterns that make a description worth clicking",
+        "basis": "other",
+        "check": "keywords",
+        "needs_choice": null,
+        "voices": [
+          "read0:claude-opus-5-5"
+        ],
+        "note": null,
+        "note_plain": null,
+        "tried": 1
+      },
+      {
+        "id": "r1-3",
+        "text": "The sentence 'Most searchers decide in under two seconds which result to open, so a mismatch costs you twice: the click goes elsewhere, or the visitor leaves at once.' gives a figure that no source supports. Remove the number, or cite a study that measured it.",
+        "kind": "fact",
+        "action": "edit",
+        "target": {
+          "quote": "Most searchers decide in under two seconds which result to open, so a mismatch costs you twice: the click goes elsewhere, or the visitor leaves at once."
+        },
+        "phrase": null,
+        "severity": "major",
+        "status": "open",
+        "closed": null,
+        "source": "reader",
+        "review": "r1",
+        "section": "Mistakes that waste the snippet",
+        "basis": "not_in_research",
+        "check": "citations",
+        "needs_choice": null,
+        "voices": [
+          "read0:claude-opus-5-5",
+          "read1:claude-sonnet-5-5"
+        ]
+      },
+      {
+        "id": "r1-4",
+        "text": "The checklist picture repeats the five numbered items right above it. Remove the picture, or keep it and cut the list.",
+        "kind": "picture",
+        "action": "remove_picture",
+        "target": {
+          "asset": "assets/infographic_1.png"
+        },
+        "phrase": null,
+        "severity": "minor",
+        "status": "open",
+        "closed": null,
+        "source": "reader",
+        "review": "r1",
+        "section": "A check before you publish",
+        "basis": "other",
+        "check": "visuals",
+        "needs_choice": null,
+        "voices": [
+          "read0:claude-opus-5-5",
+          "read2:openai:gpt-5.6-sol"
+        ]
+      }
+    ],
+    "changes": [
+      {
+        "id": "c1",
+        "findings": [
+          "r1-1"
+        ],
+        "where": [
+          "the paragraph"
+        ],
+        "before": [
+          "Finally, avoid writing the description last, in a hurry, after the page is published. Google may rewrite the snippet anyway, but a careful description is what it shows when the page and the tag agree.\n"
+        ],
+        "after": [
+          "Finally, avoid writing the description last, in a hurry, after the page is published.\n"
+        ],
+        "files": [
+          {
+            "path": "article.md",
+            "kept": "_kept/c1/article.md"
+          }
+        ],
+        "check": "fixed",
+        "version_before": "34f0f776bbf72b14",
+        "version_after": "7ea4b3f956996033",
+        "review": "r1",
+        "at": "2026-10-08T09:31:46+00:00",
+        "reverted": null,
+        "version_n": 2,
+        "check_note": "The text now does what the item asked."
+      },
+      {
+        "id": "c2",
+        "findings": [
+          "r1-2"
+        ],
+        "where": [
+          "the section 'Patterns that make a description worth clicking'"
+        ],
+        "before": [
+          "## Patterns that make a description worth clicking\n\nMost descriptions that earn clicks follow one of a few patterns. Pick the one that matches what the searcher wants from the page.\n\n| Pattern | When it fits | Example |\n|---|---|---|\n| Answer first | A question with a short answer | \"A meta description should run about 120 to 155 characters. Here is why, and how to write one that fits every screen size.\" |\n| Outcome | A guide or tutorial | \"Write meta descriptions that win clicks: five patterns, a length rule and a checklist you can use on your next page today.\" |\n| Specifics | A product or pricing page | \"Plans from $9 a month, unlimited projects and a free 14-day trial. Compare the features and pick the plan that fits your team.\" |\n| Comparison | A roundup or versus page | \"We compared six project tools on price, setup time and integrations, so you can choose one without reading six pricing pages.\" |\n| Local | A page for one place | \"Open seven days a week in central Leeds. Walk-in repairs for phones and laptops, most done while you wait. See our prices.\" |\n\nThe prices and places in the examples are made up for illustration: on a real page, use your own.\n\nEach pattern makes one promise the page keeps. That is the real rule: a description that oversells gets the click and then loses the reader, who goes back to the results and picks someone else.\n\n"
+        ],
+        "after": [
+          "## Patterns that make a description worth clicking\n\nMost descriptions that earn clicks follow one of a few patterns, and the meta description examples below show each one. Pick the one that matches what the searcher wants from the page.\n\n| Pattern | When it fits | Example |\n|---|---|---|\n| Answer first | A question with a short answer | \"A meta description should run about 120 to 155 characters. Here is why, and how to write one that fits every screen size.\" |\n| Outcome | A guide or tutorial | \"Write meta descriptions that win clicks: five patterns, a length rule and a checklist you can use on your next page today.\" |\n| Specifics | A product or pricing page | \"Plans from $9 a month, unlimited projects and a free 14-day trial. Compare the features and pick the plan that fits your team.\" |\n| Comparison | A roundup or versus page | \"We compared six project tools on price, setup time and integrations, so you can choose one without reading six pricing pages.\" |\n| Local | A page for one place | \"Open seven days a week in central Leeds. Walk-in repairs for phones and laptops, most done while you wait. See our prices.\" |\n\nThe prices and places in the examples are made up for illustration: on a real page, use your own.\n\nEach pattern makes one promise the page keeps. That is the real rule: a description that oversells gets the click and then loses the reader, who goes back to the results and picks someone else.\n\n"
+        ],
+        "files": [
+          {
+            "path": "article.md",
+            "kept": "_kept/c2/article.md"
+          }
+        ],
+        "check": "fixed",
+        "version_before": "7ea4b3f956996033",
+        "version_after": "2a510dc82cfd3ff2",
+        "review": "r1",
+        "at": "2026-10-08T09:31:46+00:00",
+        "reverted": null,
+        "version_n": 3,
+        "check_note": "The text now does what the item asked."
+      }
+    ]
+  }
+}

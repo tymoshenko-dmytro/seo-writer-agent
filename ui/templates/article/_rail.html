@@ -1,0 +1,59 @@
+{#- The rail: one card, the three facts as three rows (the review, the person's review,
+    WordPress), each with its time and one small action, and the one primary button: Accept,
+    labelled by Settings > Publishing. A job working on the article shows here; the page follows
+    it and reloads when it ends. -#}
+<aside class="rail" aria-label="The article's facts">
+  <div class="facts-card">
+    {% if job %}
+    <div class="facts-row facts-job"{% if job.active %} data-follow-job="{{ meta.slug }}" data-follow-ids="{{ (job.ids or [job.id])|join(' ') }}"{% endif %}>
+      {% if job.active %}{{ ui.status(job.topic.split(" · ")[0] ~ ": " ~ (job.step or "queued"), "blue", live=True) }}{% if job.waiting %}<div class="fact-time">{{ job.waiting }} more in the queue after it</div>{% endif %}
+      {% elif job.status == "failed" %}{{ ui.status(job.topic.split(" · ")[0] ~ " failed", "red") }}<div class="fact-time">{{ job.error }}</div>
+      {% else %}{{ ui.status(job.topic.split(" · ")[0] ~ " finished", "green", quiet=True) }}<div class="fact-time">{{ job.step }}</div>{% endif %}
+    </div>
+    {% endif %}
+    <div class="facts-row">
+      <div class="card-label">Review</div>
+      {{ ui.status(rail.review.word, rail.review.colour, quiet=rail.review.quiet) }}
+      <div class="fact-time"><span>{{ rail.review.time }}{% if rail.review.score is defined and rail.review.score is not none %} · score {{ rail.review.score }}{% endif %}</span>
+        {% if version and not (job and job.active) %}
+        <form method="post" action="{{ base }}/review-again" class="inline">
+          <input type="hidden" name="version" value="{{ version }}">
+          {{ ui.text_action("Review again", cost=rail.review_cost, disabled=not keys.ai, reason=keys.ai_reason) }}
+        </form>
+        {% endif %}
+      </div>
+      {% if rail.review.migrated %}<div class="fact-time"><a class="text-action" href="?tab=history#old-checklist">The old checklist</a></div>{% endif %}
+    </div>
+    <div class="facts-row">
+      <div class="card-label">Your review</div>
+      {{ ui.status(rail.yours.word, rail.yours.colour, quiet=rail.yours.quiet) }}
+      {% if rail.yours.time %}<div class="fact-time">{{ rail.yours.time }}</div>{% endif %}
+      {% if rail.yours.note %}<div class="fact-time">{{ rail.yours.note }}</div>{% endif %}
+    </div>
+    <div class="facts-row">
+      <div class="card-label">WordPress</div>
+      {{ ui.status(rail.wp.word, rail.wp.colour, quiet=rail.wp.quiet) }}
+      <div class="fact-time"><span>{{ rail.wp.time }}</span>
+        {% if rail.post.post_id %}
+        <form method="post" action="{{ base }}/check-post" class="inline">{{ ui.text_action("Check the post") }}</form>
+        {% else %}<a class="text-action" href="?tab=publish">Send it</a>{% endif %}
+      </div>
+      {% if rail.wp.alert %}<div class="fact-alert" role="alert">{{ icon("circle-alert") }}<span>{{ rail.wp.alert }}</span></div>{% endif %}
+    </div>
+    <div class="facts-foot">
+      {% if not version %}
+        <p class="hint">The article changed while this page was read: reload it to accept what is there now.</p>
+      {% elif rail.accepted.state == "accepted" and not rail.accept_action %}
+        <p class="hint">You accepted this version. A change makes it “changed since you accepted”.</p>
+      {% else %}
+        <form method="post" action="{{ base }}/accept">
+          <input type="hidden" name="version" value="{{ version }}">
+          <input type="hidden" name="action" value="{{ rail.accept_action }}">
+          <input type="hidden" name="post" value="{{ rail.post.post_id or '' }}">
+          {{ ui.button(rail.accept_label, "secondary" if tab_primary else "primary", block=True, attrs={"id": "accept-version"}, disabled=(job and job.active), reason="A job is working on the article." if job and job.active else None) }}
+        </form>
+        <p class="hint">{% if rail.accept_note %}{{ rail.accept_note }}, as set in <a href="/settings/publishing">Publishing</a>.{% else %}Your mark that this version is good; it sends nothing (<a href="/settings/publishing">Publishing</a>).{% endif %}</p>
+      {% endif %}
+    </div>
+  </div>
+</aside>

@@ -1,0 +1,18 @@
+# docker compose up --build  ->  http://localhost:5050 (this machine only)
+# Set UI_PASSWORD in .env first (cp .env.example .env): the Studio does not start without it.
+services:
+  studio:
+    build: .
+    ports:
+      - "127.0.0.1:5050:5050"     # reachable from this machine only; put your own proxy in front to share it
+    env_file: .env
+    environment:
+      UI_HOST: 0.0.0.0
+      UI_PASSWORD: ${UI_PASSWORD:?set UI_PASSWORD in .env}
+      JOBS_FILE: /app/project/output/_jobs.json
+    volumes:
+      - studio-data:/app/project/output
+    restart: unless-stopped
+
+volumes:
+  studio-data:

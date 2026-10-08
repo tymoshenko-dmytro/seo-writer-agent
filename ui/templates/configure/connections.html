@@ -1,0 +1,87 @@
+{% extends "base.html" %}
+{% import "_ui.html" as ui %}
+{#- Connections: the API keys (status, the last four characters,
+    Add/Replace, Test), WordPress (the site, the user, the application password, Test the
+    connection, then the author picked from the site), the link index, this install's state. -#}
+{% set page_title = "Connections" %}
+{% block content %}
+{{ ui.page_header("Connections", sub="The accounts the agent works with, the blog it publishes to, and the state of this install. A key is never shown again in full.") }}
+
+<section class="panel" id="keys">
+  <div class="panel-head"><h2 class="panel-title">API keys</h2><span class="hint">All are required: a run uses every service. A key saved here replaces the one the server was set up with; only whether it is set, where from, and its last four characters are shown.</span></div>
+  {% for k in keys if not k.env.startswith("WP_") %}
+  <div class="panel-row" id="key-{{ k.env }}">
+    <div>
+      <span class="label">{{ k.label }}</span>
+      <span class="hint">{{ k.help }}</span>
+    </div>
+    <div class="key-actions">
+      {% if k.source == "missing" %}{{ ui.status("Not set", "gray", quiet=True) }}
+      {% else %}{{ ui.status("Set here" if k.source == "studio" else "From the server", "green", quiet=True) }}<span class="key-mask">{{ k.shown }}</span>{% endif %}
+      <details class="inline-edit">
+        <summary class="text-action">{{ "Add" if k.source == "missing" else "Replace" }}</summary>
+        <form method="post" action="/settings/keys" class="btn-row" autocomplete="off">
+          <input class="input is-mono" type="password" name="{{ k.env }}" placeholder="Paste the key" aria-label="{{ k.label }} key" spellcheck="false">
+          {{ ui.button("Save", "secondary", size="sm") }}
+          {% if k.source == "studio" %}<label class="check"><input type="checkbox" name="clear_{{ k.env }}" value="1"> Remove the key saved here</label>{% endif %}
+        </form>
+      </details>
+      {% if k.source != "missing" %}<form method="post" action="/settings/keys/test/{{ k.env }}" class="inline">{{ ui.text_action("Test") }}</form>{% endif %}
+      {% if tested.get(k.env) %}<span class="hint key-test {{ 'is-ok' if tested[k.env].ok else 'is-bad' if tested[k.env].ok is sameas false }}">{{ tested[k.env].detail }}</span>{% elif k.source != "missing" %}<span class="hint key-test">Not tested yet.</span>{% endif %}
+    </div>
+  </div>
+  {% endfor %}
+  <div class="panel-foot"><form method="post" action="/settings/keys/test-all" class="inline">{{ ui.button("Test all", "secondary", icon_name="plug") }}</form><span class="hint">Every test is free: it lists the account's models, reads the account, or sends a request the service refuses before doing any work. A run starts only when every service has passed.</span></div>
+</section>
+
+<section class="panel" id="wordpress">
+  <div class="panel-head"><h2 class="panel-title">WordPress</h2>
+    {% if wp_site and wp_site.ok %}{{ ui.status("Connected to " ~ (wp_site.site or "the site"), "green") }}{% elif wp_set %}{{ ui.status("Set, not tested", "gray", quiet=True) }}{% else %}{{ ui.status("Not connected", "gray", quiet=True) }}{% endif %}</div>
+  <form method="post" action="/settings/keys" autocomplete="off">
+    {% for k in keys if k.env.startswith("WP_") %}
+    <div class="panel-row">
+      <div><label class="label" for="{{ k.env }}">{{ k.label }}</label><span class="hint">{{ k.help }}{% if k.shown %} Now: <span class="key-mask">{{ k.shown }}</span>{% endif %}</span></div>
+      <input class="input{{ ' is-mono' if k.secret }}" id="{{ k.env }}" name="{{ k.env }}" type="{{ 'password' if k.secret else 'text' }}" spellcheck="false"
+             placeholder="{{ 'https://blog.example.com' if k.env == 'WP_BASE_URL' else ('Leave empty to keep it' if k.source != 'missing' else '') }}">
+    </div>
+    {% endfor %}
+    <div class="panel-foot">{{ ui.button("Save the connection", "secondary") }}<span class="hint">The site, the user and the password are one credential: a new site or user needs the password in the same save.</span></div>
+  </form>
+  <div class="panel-foot">
+    <form method="post" action="/settings/wordpress/test" class="inline">{{ ui.button("Test the connection", "secondary", icon_name="plug") }}</form>
+    <span class="hint">{% if wp_site %}{{ wp_site.detail }}{% if wp_site.checked_at %} · {{ wp_site.checked_at }}{% endif %}{% else %}The test shows the site's name, your role and its categories, or the exact error.{% endif %}</span>
+  </div>
+  {% if wp_site and wp_site.authors %}
+  <form method="post" action="/settings/wordpress/author" class="panel-row">
+    <div><label class="label" for="author_id">The author the posts carry</label><span class="hint">A user of the site who can write posts.</span></div>
+    <div class="btn-row">
+      <select class="select" name="author_id" id="author_id">
+        <option value="">The user the password belongs to</option>
+        {% for a in wp_site.authors %}<option value="{{ a.id }}" {{ 'selected' if author_id == a.id }}>{{ a.name }}</option>{% endfor %}
+      </select>
+      {{ ui.button("Save", "secondary", size="sm") }}
+    </div>
+  </form>
+  {% endif %}
+</section>
+
+<section class="panel" id="links">
+  <div class="panel-head"><h2 class="panel-title">The internal link index</h2></div>
+  <div class="panel-row is-wide">
+    <div>
+      {% if links.count %}<span class="label">{{ links.count }} of our own pages</span><span class="hint">{{ links.blog }} on the blog, {{ links.site }} on the site, read from the sitemaps {{ links.built }}{% if links.stale %}; stale, the next run rebuilds it{% endif %}.</span>
+      {% else %}<span class="label">Not built yet</span><span class="hint">Articles carry no internal links until it is.</span>{% endif %}
+      {% if links.job and links.job.status == 'failed' %}<span class="hint is-error">The last rebuild failed: {{ (links.job.error or links.job.step)|scrub }}</span>{% endif %}
+    </div>
+    {% if links.job and links.job.status in ('queued', 'running') %}{{ ui.status("Rebuilding · " ~ (links.job.step|scrub), "blue", live=True) }}
+    {% else %}<form method="post" action="/links/refresh" class="inline">{{ ui.text_action("Rebuild now") }}</form>{% endif %}
+  </div>
+</section>
+
+<section class="panel" id="system">
+  <div class="panel-head"><h2 class="panel-title">This install</h2></div>
+  {% for name, word, colour, hint in system %}
+  <div class="panel-row is-wide"><div><span class="label">{{ name }}</span>{% if hint %}<span class="hint">{{ hint }}</span>{% endif %}</div>{{ ui.status(word, colour, quiet=(colour == "green")) }}</div>
+  {% endfor %}
+</section>
+{% endblock %}

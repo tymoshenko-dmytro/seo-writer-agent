@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+{% import "_ui.html" as ui %}
+{% import "configure/_fields.html" as cf with context %}
+{% set page_title = "Research" %}
+{% block content %}
+{{ ui.page_header("Research", sub="How the research reads the search results. Everything has a working default; a change applies to the next article, not to the ones that exist.") }}
+<form method="post" action="/settings">
+  {% for group, fields in groups %}
+  <section class="panel" id="{{ group|lower|replace(' ', '-') }}">
+    <div class="panel-head"><h2 class="panel-title">{{ group }}</h2></div>
+    {% for f in fields %}{{ cf.field(f, current, overridden) }}{% endfor %}
+  </section>
+  {% endfor %}
+  <div class="save-bar">
+    {{ ui.button("Save", "primary") }}
+    {% if has_overrides %}{{ ui.button("Back to the defaults", "ghost", name="action", value="reset", attrs={"formnovalidate": ""}) }}{% endif %}
+    <span class="hint">Kept with the articles, so a release does not reset it.</span>
+  </div>
+</form>
+{% endblock %}

@@ -1,0 +1,79 @@
+{% extends "base.html" %}
+{% import "_ui.html" as ui %}
+{#- The setup: five steps on one centred card, each skippable and returned to; offered until the
+    install can write, never forced. `cli.py setup` writes the same. -#}
+{% set page_title = "Setup" %}
+{% set hints = {"brand_voice": "How you write: the tone, words to use and words to avoid.",
+                "product_facts": "Everything the articles may say about what you sell: plans, prices, features, limits, links to its pages. Only current facts: the review trusts every number here.",
+                "editorial_rules": "Your own rules: claims to avoid, how to name customers, comparisons you allow or forbid, how much technical detail readers get. The writer follows them and the review checks them."} %}
+{% block content %}
+<div class="setup">
+  <ol class="setup-steps" aria-label="The setup's steps">
+    {% for n in names %}<li{% if loop.index == step %} aria-current="step"{% endif %}><a href="/setup?step={{ loop.index }}"><span class="setup-n">{{ loop.index }}</span>{{ n }}</a></li>{% endfor %}
+  </ol>
+  <section class="panel setup-card">
+  {% if step == 1 %}
+    <div class="panel-head"><h1 class="panel-title">The project</h1><span class="hint">Who the articles are written for and about. Everything here can be changed later in Project.</span></div>
+    <form method="post" action="/setup/project" enctype="multipart/form-data">
+      <div class="panel-row"><div><label class="label" for="s-name">Its name</label><span class="hint">Required.</span></div><input class="input" id="s-name" name="name" value="{{ project.name }}"></div>
+      <div class="panel-row"><div><label class="label" for="s-logo">Its logo</label><span class="hint">PNG, JPG, WebP or SVG. On the cover and the infographics.</span></div><div class="logo-edit">{% if logo %}<img class="logo-preview" src="{{ logo.url }}" alt="">{% endif %}<input type="file" id="s-logo" name="logo" accept=".png,.jpg,.jpeg,.webp,.svg"></div></div>
+      <div class="panel-row"><div><label class="label" for="s-domain">The site's domain</label><span class="hint">Required. Its sitemap gives the articles their internal links.</span></div><input class="input" id="s-domain" name="domain" value="{{ (website.domains or [''])[0] }}" placeholder="example.com"></div>
+      <div class="panel-row"><div><label class="label" for="s-blog">The blog's address</label></div><input class="input" id="s-blog" name="blog" value="{{ website.blog_base_url or '' }}" placeholder="https://blog.example.com"></div>
+      <div class="panel-row"><div><label class="label" for="s-aud">The audience, in one line</label></div><input class="input" id="s-aud" name="audience" value="{{ audience_line }}"></div>
+      <div class="panel-foot">{{ ui.button("Save and go on", "primary") }}{{ ui.text_action("Skip this step", href="/setup?step=2") }}<a class="text-action setup-later" href="/">Later</a></div>
+    </form>
+  {% elif step == 2 %}
+    <div class="panel-head"><h1 class="panel-title">Its texts</h1><span class="hint">What the agents know about the product and how they write about it. Each may stay empty and be written later in Project.</span></div>
+    <form method="post" action="/setup/texts">
+      <div class="panel-body form-stack">
+      {% for t in texts %}
+        {% call ui.field(t.label, "t-" ~ t.key, hint=hints[t.key]) %}
+        <textarea class="textarea" id="t-{{ t.key }}" name="{{ t.key }}" rows="{{ 10 if t.key == 'product_facts' else 5 }}" aria-describedby="t-{{ t.key }}-hint">{{ t.text }}</textarea>
+        {% endcall %}
+      {% endfor %}
+      </div>
+      <div class="panel-foot">{{ ui.button("Save and go on", "primary") }}{{ ui.text_action("Skip this step", href="/setup?step=3") }}</div>
+    </form>
+  {% elif step == 3 %}
+    <div class="panel-head"><h1 class="panel-title">Keys</h1><span class="hint">The accounts the agent works with. All six are required: a run uses every one. A key is never shown again in full.</span></div>
+    <form method="post" action="/setup/keys" autocomplete="off">
+      {% for k in keys if not k.env.startswith("WP_") %}
+      <div class="panel-row">
+        <div><label class="label" for="k-{{ k.env }}">{{ k.label }}</label><span class="hint">{{ k.help }}</span></div>
+        <div>
+          <input class="input is-mono" type="password" id="k-{{ k.env }}" name="{{ k.env }}" placeholder="{{ ('set: ' ~ k.shown) if k.source != 'missing' else 'Paste the key' }}" spellcheck="false">
+          {% if tests.get(k.env) %}<span class="hint key-test {{ 'is-ok' if tests[k.env].ok else 'is-bad' if tests[k.env].ok is sameas false }}">{{ tests[k.env].detail }}</span>{% endif %}
+        </div>
+      </div>
+      {% endfor %}
+      <div class="panel-foot">{{ ui.button("Save and test", "primary") }}{{ ui.text_action("Go on", href="/setup?step=4") }}<span class="hint">Every test is free: no model runs and no credit is spent.</span></div>
+    </form>
+  {% elif step == 4 %}
+    <div class="panel-head"><h1 class="panel-title">WordPress</h1><span class="hint">The blog the articles go to. Required. Create an application password in WordPress under Users › Profile › Application Passwords.</span></div>
+    <form method="post" action="/setup/wordpress" autocomplete="off">
+      <div class="panel-row"><div><label class="label" for="w-url">The site's address</label></div><input class="input" id="w-url" name="wp_url" placeholder="https://blog.example.com" value="{{ wp_url }}"></div>
+      <div class="panel-row"><div><label class="label" for="w-user">The user</label></div><input class="input" id="w-user" name="wp_user" value="{{ wp_user }}"></div>
+      <div class="panel-row"><div><label class="label" for="w-pass">The application password</label></div><input class="input is-mono" type="password" id="w-pass" name="wp_password" placeholder="{{ 'set: leave empty to keep it' if wp_set else '' }}"></div>
+      <div class="panel-foot">{{ ui.button("Save and test the connection", "primary", icon_name="plug") }}<span class="hint">{% if site %}{{ site.detail }}{% else %}The test shows the site's name, your role and its categories, or the exact error.{% endif %}</span></div>
+    </form>
+    {% if site and site.ok %}
+    <form method="post" action="/setup/wordpress/pick">
+      <div class="panel-row"><div><label class="label" for="w-author">The author the posts carry</label></div>
+        <select class="select" id="w-author" name="author_id"><option value="">The user above</option>{% for a in site.authors %}<option value="{{ a.id }}" {{ 'selected' if author_id == a.id }}>{{ a.name }}</option>{% endfor %}</select></div>
+      <div class="panel-row"><div><label class="label" for="w-cat">The category for new posts</label></div>
+        <select class="select" id="w-cat" name="category"><option value="">None</option>{% for c in site.categories %}<option value="{{ c }}" {{ 'selected' if category == c }}>{{ c }}</option>{% endfor %}</select></div>
+      <div class="panel-foot">{{ ui.button("Save and go on", "primary") }}</div>
+    </form>
+    {% endif %}
+    <div class="panel-foot">{{ ui.text_action("Skip this step", href="/setup?step=5") }}</div>
+  {% else %}
+    <div class="panel-head"><h1 class="panel-title">Done</h1><span class="hint">{% if state.done %}The Studio can write. Give it a topic.{% elif state.can_write %}Everything is set; {{ state.untested|join(", ") }} {{ "is" if state.untested|length == 1 else "are" }} tested when the first run starts.{% else %}{{ state.reason }} Reading, editing and the sample article work now.{% endif %}</span></div>
+    <form method="post" action="/setup/done" class="panel-foot">
+      {{ ui.button("Write the first article", "primary", name="next", value="new", disabled=not state.can_write, reason=state.reason if not state.can_write else None) }}
+      {{ ui.button("Go to the articles", "secondary", name="next", value="list") }}
+    </form>
+    <form method="post" action="/sample" class="panel-foot">{{ ui.button("Open the sample article", "secondary", icon_name="book-open") }}<span class="hint">A finished article with its review and pictures, made up for the tour: no key, no cost.</span></form>
+  {% endif %}
+  </section>
+</div>
+{% endblock %}

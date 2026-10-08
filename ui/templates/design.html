@@ -1,0 +1,212 @@
+{% extends "base.html" %}
+{% import "_ui.html" as ui %}
+{% set page_title = "Design reference" %}
+{% set pic_a = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 120'%3E%3Crect width='200' height='120' fill='%23F1F0EC'/%3E%3Crect x='24' y='70' width='22' height='30' fill='%239B9893'/%3E%3Crect x='58' y='50' width='22' height='50' fill='%239B9893'/%3E%3Crect x='92' y='34' width='22' height='66' fill='%239B9893'/%3E%3C/svg%3E" %}
+{% set pic_b = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 120'%3E%3Crect width='200' height='120' fill='%23F1F0EC'/%3E%3Crect x='24' y='70' width='22' height='30' fill='%236B6966'/%3E%3Crect x='58' y='50' width='22' height='50' fill='%236B6966'/%3E%3Crect x='92' y='34' width='22' height='66' fill='%236B6966'/%3E%3Crect x='126' y='20' width='22' height='80' fill='%236B6966'/%3E%3C/svg%3E" %}
+{% block content %}
+{% call ui.page_header("Design reference", sub="Every component of the interface, with sample data. The screens are built from these; nothing here changes an article.", links=[("Tokens", "#tokens"), ("Components", "#components")]) %}
+  {{ ui.button("Export", "ghost", icon_name="file-down", href="#") }}
+  {{ ui.button("New article", "primary", icon_name="plus", href="#") }}
+{% endcall %}
+
+<section class="ref-section" id="tokens">
+  <h2 class="section-title">Colour</h2>
+  <div class="ref-row">
+    {% for name in ["canvas", "surface", "sunken", "line", "ink", "muted", "faint"] %}
+    <div class="ref-swatch"><span style="background:var(--{{ name }})"></span>--{{ name }}</div>
+    {% endfor %}
+  </div>
+  <p class="hint">States: one meaning each, a word always beside the colour.</p>
+  <div class="chip-row" style="margin-top:var(--s3)">
+    {{ ui.chip("Not reviewed", "gray") }}
+    {{ ui.chip("Accepted", "green") }}
+    {{ ui.chip("3 open", "yellow") }}
+    {{ ui.chip("Live #3349", "orange") }}
+    {{ ui.chip("Reviewing", "blue", live=True) }}
+    {{ ui.chip("Unknown: check it", "red") }}
+  </div>
+</section>
+
+<section class="ref-section">
+  <h2 class="section-title">Type</h2>
+  <div class="card">
+    <p class="page-title">Page title, 28 on 36</p>
+    <p class="section-title" style="margin:var(--s2) 0">Section title, 20 on 28</p>
+    <p>Body text, 15 on 24. A check that could not run never looks like a pass.</p>
+    <p class="small muted">Secondary text, 13 on 20: read 10:14, sent Oct 2.</p>
+    <p class="mono muted" style="margin-top:var(--s2)">Label · filter · version · r2</p>
+    <p class="doc-col" style="font-size:var(--text-doc); line-height:var(--leading-doc); margin-top:var(--s4)">The article preview reads at 17 on 28, in a column 720 pixels wide, like a document rather than a form.</p>
+  </div>
+</section>
+
+<section class="ref-section" id="components">
+  <h2 class="section-title">Buttons</h2>
+  <div class="ref-row">
+    {{ ui.button("Update the live post #3349", "primary", icon_name="send") }}
+    {{ ui.button("Check the post", "secondary", icon_name="refresh-cw") }}
+    {{ ui.button("Export", "ghost", icon_name="file-down") }}
+    {{ ui.button("Delete", "danger", icon_name="trash") }}
+    {{ ui.button("History", "mono") }}
+  </div>
+  <div class="ref-row">
+    {{ ui.button("Review again", "secondary", icon_name="refresh-cw", cost="about $0.60") }}
+    {{ ui.button("Revert this change", "secondary", icon_name="undo-2", size="sm") }}
+    <div>{{ ui.button("New article", "primary", icon_name="plus", disabled=True, reason="Add the Anthropic and Parallel keys first: Connections.") }}</div>
+  </div>
+</section>
+
+<section class="ref-section">
+  <h2 class="section-title">Chips and severity</h2>
+  <div class="ref-row">
+    {{ ui.chip("Not sent") }} {{ ui.chip("Draft #3349", "green") }} {{ ui.chip("Live #3349", "orange") }}
+    {{ ui.chip("Changed since sent", "yellow") }} {{ ui.chip("The check could not run", "red") }}
+    {{ ui.chip("fact", plain=True) }} {{ ui.chip("picture", plain=True) }}
+  </div>
+  <div class="ref-row">
+    {{ ui.severity("critical") }} {{ ui.severity("major") }} {{ ui.severity("minor") }} {{ ui.severity("nitpick") }}
+  </div>
+</section>
+
+<section class="ref-section">
+  <h2 class="section-title">Numbers</h2>
+  <div class="stats">
+    {{ ui.stat("$41.20", "spent this month", href="#") }}
+    {{ ui.stat("12", "articles", href="#") }}
+    {{ ui.stat("1", "job running", href="#") }}
+  </div>
+  <div class="card">
+    <div class="card-label">Total</div>
+    <div class="big-number">$318.64</div>
+    <div class="hint">$26.55 per article on average</div>
+  </div>
+</section>
+
+<section class="ref-section">
+  <h2 class="section-title">Filters and a table</h2>
+  {% call ui.filters([("all", "All", "#", 12), ("look", "To look at", "#", 3), ("accepted", "Accepted", "#", 5), ("changed", "Changed since accepted", "#", 1), ("wp", "On WordPress", "#", 7), ("sent", "Changed since sent", "#", 2)], "all", label="Articles") %}
+    <label class="search"><span class="visually-hidden">Search the articles</span>{{ icon("search") }}<input class="input" type="search" placeholder="Search"></label>
+  {% endcall %}
+  <div class="table-wrap">
+    <table class="table">
+      <thead><tr>
+        {{ ui.th_sort("Article", "#", "descending") }}<th>Review</th><th>Your review</th><th>WordPress</th>{{ ui.th_sort("Cost", "#", num=True) }}
+      </tr></thead>
+      <tbody>
+        <tr data-href="#">
+          <td><div class="cell-main"><a href="#">How to choose a project management tool</a></div><div class="cell-sub">project-management-tool · Oct 2</div></td>
+          <td>{{ ui.chip("3 open", "yellow") }}<div class="cell-note">score 82 · r2, Oct 2</div></td>
+          <td>{{ ui.chip("Changed since you accepted", "yellow") }}</td>
+          <td>{{ ui.chip("Live #3349", "orange") }}<div class="cell-note">read 10:14 · changed since sent</div></td>
+          <td class="num">$5.82</td>
+        </tr>
+        <tr data-href="#">
+          <td><div class="cell-main"><a href="#">In-house team vs agency for content</a></div><div class="cell-sub">in-house-vs-agency · Sep 30</div></td>
+          <td>{{ ui.chip("Nothing open", "green") }}<div class="cell-note">score 100 · r1, Sep 30</div></td>
+          <td>{{ ui.chip("Accepted", "green") }}<div class="cell-note">by Dmitro, Sep 30</div></td>
+          <td>{{ ui.chip("Draft #3351", "green") }}<div class="cell-note">read Oct 1</div></td>
+          <td class="num">$4.10</td>
+        </tr>
+        <tr data-href="#">
+          <td><div class="cell-main"><a href="#">Invoice software for freelancers</a></div><div class="cell-sub">invoice-software · Sep 12</div>{{ ui.progress("Reviewing", "reader 2 of 3") }}</td>
+          <td>{{ ui.chip("Not reviewed in the new system") }}</td>
+          <td>{{ ui.chip("Not accepted") }}</td>
+          <td>{{ ui.chip("Unknown: check it", "red") }}</td>
+          <td class="num">$3.97</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section class="ref-section">
+  <h2 class="section-title">Tabs</h2>
+  {{ ui.tabs([("article", "Article", "#"), ("review", "Review", "#", 4), ("publish", "Publish", "#"), ("seo", "SEO", "#"), ("pictures", "Pictures", "#"), ("sources", "Sources", "#"), ("costs", "Costs", "#"), ("history", "History", "#")], "review", label="The article") }}
+  {{ ui.toggle([("blocks", "Blocks", "#"), ("md", "Markdown", "#")], "blocks", label="Editor view") }}
+</section>
+
+<section class="ref-section">
+  <h2 class="section-title">Fact cards</h2>
+  <div class="ref-grid">
+    {% call ui.fact_card("Your review", "Changed since you accepted it", "yellow", time="Accepted by Dmitro, Oct 2 10:14 · the text changed") %}
+      {{ ui.button("Accept and update the live post #3349", "primary", block=True) }}
+    {% endcall %}
+    {% call ui.fact_card("Review", "82, from 3 open findings", time="Review r2, Oct 2 · 4 changes, 2 proposals, 1 left") %}
+      {{ ui.button("Review again", "secondary", icon_name="refresh-cw", cost="about $0.60", block=True) }}
+    {% endcall %}
+    {% call ui.fact_card("WordPress", "Live #3349", "orange", time="Read 10:14 · last sent Oct 2, changed since sent", alert="The send of 10:14 was not confirmed: check the post in WordPress.") %}
+      {{ ui.button("Check the post", "secondary", icon_name="refresh-cw", block=True) }}
+    {% endcall %}
+  </div>
+</section>
+
+<section class="ref-section">
+  <h2 class="section-title">Changes</h2>
+  {% call ui.change_card("The paragraph in", before="The tool imports a spreadsheet in under a minute for most files.", after="The tool imports a 10,000-row spreadsheet in about 40 seconds [source].", check="fixed", detail="Speed") %}
+    {{ ui.button("Revert this change", "secondary", icon_name="undo-2", size="sm") }}
+  {% endcall %}
+  {% call ui.change_card("The picture", pics={"before": pic_a, "after": pic_b}, check="not_checked", check_note="a picture the check cannot read: look at it", detail="assets/chart_1.png", why="Redrawn: the chart left out the fourth year.") %}{% endcall %}
+</section>
+
+<section class="ref-section">
+  <h2 class="section-title">Proposals</h2>
+  <form>
+    <div class="proposals">
+      {{ ui.proposal_row("pick", "f3", "It removes a picture", "The screenshot repeats the chart above it.", target="assets/screenshot_2.png", severity_="minor", kind="picture", thumb=pic_a) }}
+      {{ ui.proposal_row("pick", "f5", "It changes a factual claim", "Name the year the survey was published.", target="«a 2023 survey of 400 event organisers»", severity_="major", kind="fact", checked=True) }}
+    </div>
+    <div class="btn-row" style="margin-top:var(--s3)">{{ ui.button("Apply the 1 ticked proposal", "primary", type="button") }}</div>
+  </form>
+</section>
+
+<section class="ref-section">
+  <h2 class="section-title">Banners</h2>
+  <div style="display:flex; flex-direction:column; gap:var(--s2)">
+    {{ ui.stale_banner() }}
+    {{ ui.banner("A job is working on this article: Reviewing. Actions wait until it finishes.", "blue", icon_name="loader-circle") }}
+    {{ ui.banner("The setup is not finished: the keys and WordPress are not set.", "gray", link="Finish the setup", href="#", icon_name="info") }}
+    {{ ui.banner("The Anthropic key is missing: nothing can be written or reviewed.", "red", link="Add it in Connections", href="#", icon_name="key-round") }}
+  </div>
+</section>
+
+<section class="ref-section">
+  <h2 class="section-title">Empty state, progress, toast</h2>
+  <div class="ref-grid">
+    {{ ui.empty_state("file-text", "No articles yet", "Give it a topic and it researches, writes and reviews an article for you to read.", "New article", "#") }}
+    <div class="card">{{ ui.progress("Writing “invoice software”", "Research") }}</div>
+    <div>{{ ui.toast("Sent: draft #3349 updated") }}</div>
+  </div>
+</section>
+
+<section class="ref-section">
+  <h2 class="section-title">Forms</h2>
+  <div class="card" style="max-width:var(--doc-width)">
+    {% call ui.field("The topic", "ref-topic", hint="A short head term works best: invoice software, not a full title.") %}
+      <input class="input input-large" id="ref-topic" placeholder="invoice software" aria-describedby="ref-topic-hint">
+    {% endcall %}
+    {% call ui.field("Research depth", "ref-depth") %}
+      <select class="select" id="ref-depth"><option>Core: the standard pass</option><option>Pro: deeper, slower</option></select>
+    {% endcall %}
+    {% call ui.field("Why it is not important", "ref-why") %}
+      <textarea class="textarea" id="ref-why" placeholder="The section says it already."></textarea>
+    {% endcall %}
+    <label class="check"><input type="checkbox" checked> Keyword research</label>
+  </div>
+</section>
+
+<section class="ref-section">
+  <h2 class="section-title">Dialog</h2>
+  {{ ui.dialog_button("ref-dialog", "Update the live post #3349", "primary", icon_name="send") }}
+  {% call ui.dialog("ref-dialog", "Update the live post #3349 with the version of 10:14?", text="People read this post now. The checks before the send:") %}
+    <ul class="dialog-list">
+      <li>{{ ui.chip("found", "yellow") }}<span>2 internal links not in our link index (built Sep 30)</span></li>
+      <li>{{ ui.chip("clear", "green") }}<span>every picture the page shows is in the article</span></li>
+      <li>{{ ui.chip("not checked") }}<span>uniqueness not checked</span></li>
+      <li>{{ ui.chip("could not run", "red") }}<span>the check of how the article was written could not run</span></li>
+    </ul>
+    <div class="dialog-actions">
+      {{ ui.button("Cancel", "secondary", type="button", attrs={"data-dialog-close": ""}) }}
+      {{ ui.button("Update the live post #3349", "primary", type="button", attrs={"data-dialog-close": ""}) }}
+    </div>
+  {% endcall %}
+</section>
+{% endblock %}

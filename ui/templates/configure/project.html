@@ -1,0 +1,71 @@
+{% extends "base.html" %}
+{% import "_ui.html" as ui %}
+{#- Project: who the articles are written for and about. The
+    interface looks the same for every project; these are what the articles carry. -#}
+{% set page_title = "Project" %}
+{% block content %}
+{{ ui.page_header("Project", sub="Who the articles are written for and about. The interface looks the same for every project; these are what the articles carry.") }}
+
+<section class="panel" id="identity">
+  <div class="panel-head"><h2 class="panel-title">Identity</h2></div>
+  <form method="post" action="/settings/project/project_name" class="panel-row">
+    <div><label class="label" for="project-name">Name</label><span class="hint">In the sidebar, the page titles and the prompts.</span></div>
+    <div class="btn-row"><input class="input" id="project-name" name="text" value="{{ name }}">{{ ui.button("Save", "secondary", size="sm") }}</div>
+  </form>
+  <div class="panel-row">
+    <div><span class="label">Logo</span><span class="hint">On the covers and infographics, in the sidebar and on the login card. PNG, JPG, WebP or SVG, up to 2 MB.</span></div>
+    <div class="logo-edit">
+      {% if logo %}<img class="logo-preview" src="{{ logo.url }}" alt="The logo">{% else %}<span class="hint">No logo</span>{% endif %}
+      <form method="post" action="/settings/project/logo" enctype="multipart/form-data" class="inline">
+        <label class="text-action">{{ "Replace" if logo else "Upload" }}<input type="file" name="logo" accept=".png,.jpg,.jpeg,.webp,.svg" class="visually-hidden" data-autosubmit></label>
+        <noscript>{{ ui.button("Upload", "secondary", size="sm") }}</noscript>
+      </form>
+      {% if logo %}<form method="post" action="/settings/project/logo" class="inline"><input type="hidden" name="action" value="remove">{{ ui.text_action("Remove") }}</form>{% endif %}
+    </div>
+  </div>
+</section>
+
+<section class="panel" id="website">
+  <div class="panel-head"><h2 class="panel-title">Website</h2><span class="hint">Our own pages: internal links, the sources the fixer may cite, what the uniqueness check does not count.</span></div>
+  <form method="post" action="/settings/project/website">
+    <div class="panel-row"><div><label class="label" for="domains">Our domains</label><span class="hint">Comma-separated, like example.com.</span></div><input class="input" id="domains" name="domains" value="{{ website.domains|join(', ') }}"></div>
+    <div class="panel-row"><div><label class="label" for="blog">The blog</label><span class="hint">Its address: the search preview's host, and where posts live.</span></div><input class="input" id="blog" name="blog_base_url" value="{{ website.blog_base_url }}" placeholder="https://blog.example.com"></div>
+    <div class="panel-row"><div><label class="label" for="site-map">The site's sitemap</label><span class="hint">Read to build the internal link index; unless set, https://&lt;our domain&gt;/sitemap.xml. Saved empty, it is not read.</span></div><input class="input is-mono" id="site-map" name="site_sitemap" value="{{ website.site_sitemap }}"></div>
+    <div class="panel-row"><div><label class="label" for="blog-map">The blog's sitemap</label><span class="hint">Unless set, the blog's address + /sitemap_index.xml (WordPress with Yoast). Saved empty, it is not read.</span></div><input class="input is-mono" id="blog-map" name="blog_sitemap" value="{{ website.blog_sitemap }}"></div>
+    <div class="panel-foot">{{ ui.button("Save the website", "secondary") }}</div>
+  </form>
+</section>
+
+<section class="panel" id="texts">
+  <div class="panel-head"><h2 class="panel-title">What the writer knows</h2><span class="hint">Open one to read or change it; the next run uses it. The date slots are set by the code.</span></div>
+  {% for t in texts if t.key != "project_name" %}
+  <a class="panel-row is-wide" href="/settings/project/{{ t.key }}">
+    <div><span class="label">{{ t.label }}</span><span class="preview-line">{{ t.preview }}</span></div>
+    {% if t.changed %}{{ ui.status("edited", "yellow") }}{% else %}{{ ui.status("Original", "gray", quiet=True) }}{% endif %}
+  </a>
+  {% endfor %}
+  <a class="panel-row is-wide" href="/settings/project/project_name"><div><span class="label">The name, as the prompts read it</span><span class="preview-line">{{ name }}</span></div>{{ ui.status("edited", "yellow") if name_changed else ui.status("Original", "gray", quiet=True) }}</a>
+</section>
+
+<section class="panel" id="pictures">
+  <div class="panel-head"><h2 class="panel-title">The pictures' colours</h2><span class="hint">The article's charts, infographics and cover: the blog's look, not the interface's.</span></div>
+  <form method="post" action="/settings/project/palette">
+    <div class="panel-body swatch-edit">
+      {% for k, v in palette.items() %}
+      <label class="swatch-field"><input type="color" name="{{ k }}" value="{{ v }}" aria-label="{{ k|replace('_', ' ') }}"><span>{{ k|replace('_', ' ') }}</span><span class="hint id">{{ v }}</span></label>
+      {% endfor %}
+    </div>
+    <div class="panel-foot">{{ ui.button("Save the colours", "secondary") }}<span class="hint">The next picture uses them; the ones made stay as they are.</span></div>
+  </form>
+</section>
+
+<details class="panel panel-more" id="competitors">
+  <summary>Competitors <span class="hint">· advanced</span></summary>
+  <form method="post" action="/settings/project/competitors">
+    <div class="panel-row is-wide"><div><label class="label" for="hosts">Competitor hosts</label><span class="hint">Only a document on one of them may be linked (a help page, a PDF, a report), never a product, pricing or comparison page. One per line.</span></div></div>
+    <div class="panel-body"><textarea class="textarea is-mono" id="hosts" name="hosts" rows="8">{{ competitors|join("\n") }}</textarea></div>
+    <div class="panel-foot">{{ ui.button("Save the competitors", "secondary") }}</div>
+  </form>
+</details>
+{% endblock %}
+{% block scripts %}<script src="{{ url_for('static', filename='js/configure.js', v=asset_v('js/configure.js')) }}" defer></script>{% endblock %}

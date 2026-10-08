@@ -1,0 +1,11 @@
+<li class="{{ 'is-current' if v.current }}">
+  <div class="v-head"><span class="v-n">v{{ v.n }}</span><span class="v-what">{{ v.what }}</span><span class="hint">{{ v.when }}</span>{% if v.current %}<span class="hint">· the version you see</span>{% endif %}</div>
+  <div class="hint">{{ v.who }}{% if v.detail %} · {{ v.detail }}{% endif %}</div>
+  {% if v.marks %}<div class="chip-row">{% for m, col in v.marks %}{{ ui.status(m, col) }}{% endfor %}</div>{% endif %}
+  {% if not v.current %}
+  <div class="v-actions">
+    {{ ui.text_action("View and compare", href=base ~ "/v/" ~ v.n) }}
+    {% if version %}{{ ui.text_action("Restore this version", href=base ~ "/v/" ~ v.n ~ "#restore", attrs={"data-restore": base ~ "/v/" ~ v.n ~ "/restore"}) }}{% endif %}
+  </div>
+  {% endif %}
+</li>

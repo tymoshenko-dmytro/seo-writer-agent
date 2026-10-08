@@ -1,0 +1,63 @@
+{% extends "base.html" %}
+{% import "_ui.html" as ui %}
+{#- A run that has no article yet: its stages as a timeline, each
+    with its state, time and cost, the running one with its live step; the log folded; a failed or
+    stopped run in plain words, what was paid and kept, and Run again. -#}
+{% set page_title = meta.title %}
+{% set base = "/a/" ~ meta.slug %}
+{% block content %}
+<a class="crumb" href="/">{{ icon("arrow-left", 14) }}Articles</a>
+<header class="page-header">
+  <div class="page-heading"><h1 class="page-title">{{ meta.title }}</h1></div>
+  {% if not running %}
+  <div class="page-actions">{% call ui.menu() %}<button class="menu-item is-danger" type="button" data-dialog="delete-dialog">{{ icon("trash") }}Move to the trash</button>{% endcall %}</div>
+  {% endif %}
+  <p class="page-meta">{{ meta.slug }}<span class="sep">·</span>{{ meta.cost.total|usd }} so far{% if meta.cost.estimated %} (estimated){% endif %}</p>
+</header>
+{% call ui.dialog("delete-dialog", "Move this run to the trash?", text="The folder moves to the trash and can be restored from there.") %}
+  <form method="post" action="{{ base }}/delete" class="dialog-actions">{{ ui.button("Cancel", "secondary", type="button", attrs={"data-dialog-close": ""}) }}{{ ui.button("Move to the trash", "danger") }}</form>
+{% endcall %}
+
+{% if running %}
+  <span data-follow-jobs hidden></span><span data-job-step="run:{{ meta.slug }}" hidden>running: {{ job_step or "" }}</span>
+  {{ ui.banner("Being written now: the page follows the run and shows the article when it is done.", "blue", icon_name="loader-circle") }}
+{% elif status in ("failed", "aborted", "running", "corrupt", "empty") %}
+  {{ ui.banner(reason, "red", icon_name="circle-alert") }}
+{% elif status == "draft" %}
+  {{ ui.banner("Only the writer's draft is here: the run did not reach the article. The draft is below as it was written.", "yellow", icon_name="circle-alert") }}
+{% endif %}
+
+<section class="panel">
+  <div class="panel-head"><h2 class="panel-title">The run</h2>{% if run.topic %}<span class="hint panel-aside">“{{ run.topic }}”</span>{% endif %}</div>
+  <ol class="stages-line">
+    {% for s in stages %}
+    <li>
+      <span class="stage-dot is-{{ s.state|replace(' ', '-') }}" aria-hidden="true"></span>
+      <span><span class="label">{{ s.label }}</span> <span class="hint inline">· {{ {"done": "done", "running": "running", "failed": "failed here", "stopped": "stopped here", "skipped": "skipped", "not reached": "not reached"}[s.state] }}{% if s.step %}: {{ s.step }}{% endif %}</span></span>
+      <span class="stage-meta">{% if s.minutes %}{{ "%.0f"|format(s.minutes) }} min · {% endif %}{% if s.cost %}{{ s.cost|usd }}{% elif s.state == "done" %}free{% endif %}</span>
+    </li>
+    {% endfor %}
+  </ol>
+  {% if not running and status in ("failed", "aborted", "running", "draft", "empty", "corrupt") %}
+  <div class="panel-foot">
+    <form method="post" action="{{ base }}/run-again" class="inline">{{ ui.button("Run again", "primary", cost=again_cost) }}</form>
+    <span class="hint">{% if cached %}From this run's keyword research, brief and research: they are not paid for again.{% else %}A new run of the topic: nothing from this one can be reused.{% endif %}</span>
+  </div>
+  {% endif %}
+</section>
+
+{% if stages_reports %}
+<section class="panel">
+  <div class="panel-head"><h2 class="panel-title">What was kept</h2><span class="hint panel-aside">each step's report; open one to read it</span></div>
+  {% for s in stages_reports %}<details class="trail"><summary><span class="label">{{ s.label }}</span><span class="hint">{{ s.hint }}</span></summary><div class="trail-body prose">{{ s.html|safe }}</div></details>{% endfor %}
+</section>
+{% endif %}
+{% if draft_html %}
+<details class="panel panel-more"><summary>The writer's draft</summary><article class="prose trail-body">{{ draft_html|safe }}</article></details>
+{% endif %}
+{% if log %}
+<details class="panel panel-more"><summary>The run's log ({{ log|length }} lines)</summary><pre class="log">{% for line in log %}{{ line }}
+{% endfor %}</pre></details>
+{% endif %}
+{% endblock %}
+{% block scripts %}<script src="{{ url_for('static', filename='js/articles.js', v=asset_v('js/articles.js')) }}" defer></script>{% endblock %}

@@ -1,0 +1,42 @@
+# The charts' style: light-mode PNGs for blog embedding, a neutral ink and grid
+# (core/producers/charts.py draws the marks).
+figure.facecolor: fcfcfb
+figure.dpi: 110
+savefig.facecolor: fcfcfb
+savefig.dpi: 200
+savefig.bbox: tight
+savefig.pad_inches: 0.25
+
+font.family: sans-serif
+font.sans-serif: DejaVu Sans, Arial, Helvetica, sans-serif
+font.size: 12
+
+axes.facecolor: fcfcfb
+axes.edgecolor: c3c2b7
+axes.linewidth: 1.0
+axes.titlesize: 15
+axes.titleweight: bold
+axes.titlecolor: 0b0b0b
+axes.titlelocation: left
+axes.titlepad: 12
+axes.labelcolor: 52514e
+axes.labelsize: 11
+axes.labelweight: normal
+axes.spines.top: False
+axes.spines.right: False
+axes.axisbelow: True
+
+axes.grid: True
+axes.grid.axis: y
+grid.color: e1e0d9
+grid.linewidth: 1.0
+
+xtick.color: 52514e
+ytick.color: 898781
+xtick.labelsize: 10.5
+ytick.labelsize: 10
+xtick.major.size: 0
+ytick.major.size: 0
+
+legend.frameon: False
+legend.fontsize: 10.5

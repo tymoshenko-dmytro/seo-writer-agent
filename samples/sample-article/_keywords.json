@@ -1,0 +1,412 @@
+{
+  "article_words": 851,
+  "primary": {
+    "keyword": "meta description",
+    "words": 2,
+    "h1": 1,
+    "headings": 2,
+    "body": 6,
+    "alt": 2,
+    "meta": 2,
+    "total": 9,
+    "close": 0,
+    "scattered_body": 1,
+    "headings_hit": [
+      "What a meta description does",
+      "How long a meta description should be"
+    ],
+    "density": 2.12,
+    "in_opening": true
+  },
+  "thresholds": {
+    "primary_min_total": 3,
+    "primary_density_min": 0.5,
+    "primary_density_max": 2.5,
+    "primary_in_h1": true,
+    "primary_in_headings_min": 1,
+    "primary_in_first_words": 100,
+    "secondary_coverage_min": 50,
+    "lsi_coverage_min": 30,
+    "section_keyword_coverage_min": 50
+  },
+  "zones": {
+    "h1_words": 10,
+    "heading_count": 5,
+    "body_words": 812,
+    "alt_words": 35,
+    "meta_words": 33
+  },
+  "groups": {
+    "mandatory": {
+      "label": "Mandatory keywords (set by SEO)",
+      "rows": [],
+      "covered": 0,
+      "total": 0,
+      "coverage": 0.0,
+      "min": 100
+    },
+    "secondary": {
+      "label": "Secondary targets",
+      "rows": [
+        {
+          "keyword": "meta description length",
+          "words": 3,
+          "h1": 0,
+          "headings": 0,
+          "body": 1,
+          "alt": 0,
+          "meta": 0,
+          "total": 1,
+          "close": 0,
+          "scattered_body": 0,
+          "headings_hit": [],
+          "section": "How long a meta description should be",
+          "priority": "desired"
+        },
+        {
+          "keyword": "how to write a meta description",
+          "words": 6,
+          "h1": 1,
+          "headings": 0,
+          "body": 0,
+          "alt": 0,
+          "meta": 1,
+          "total": 1,
+          "close": 0,
+          "scattered_body": 0,
+          "headings_hit": [],
+          "priority": "desired"
+        }
+      ],
+      "covered": 2,
+      "total": 2,
+      "coverage": 100.0,
+      "min": 50
+    },
+    "sections": {
+      "label": "Brief section keywords",
+      "rows": [
+        {
+          "keyword": "what is a meta description",
+          "words": 5,
+          "h1": 0,
+          "headings": 0,
+          "body": 0,
+          "alt": 0,
+          "meta": 0,
+          "total": 0,
+          "close": 0,
+          "scattered_body": 0,
+          "headings_hit": [],
+          "section": "What a meta description does",
+          "priority": "desired"
+        },
+        {
+          "keyword": "meta description length",
+          "words": 3,
+          "h1": 0,
+          "headings": 0,
+          "body": 1,
+          "alt": 0,
+          "meta": 0,
+          "total": 1,
+          "close": 0,
+          "scattered_body": 0,
+          "headings_hit": [],
+          "section": "How long a meta description should be",
+          "priority": "desired"
+        },
+        {
+          "keyword": "meta description examples",
+          "words": 3,
+          "h1": 0,
+          "headings": 0,
+          "body": 0,
+          "alt": 0,
+          "meta": 0,
+          "total": 0,
+          "close": 0,
+          "scattered_body": 0,
+          "headings_hit": [],
+          "section": "Patterns that make a description worth clicking",
+          "priority": "desired"
+        },
+        {
+          "keyword": "meta description best practices",
+          "words": 4,
+          "h1": 0,
+          "headings": 0,
+          "body": 0,
+          "alt": 0,
+          "meta": 0,
+          "total": 0,
+          "close": 0,
+          "scattered_body": 0,
+          "headings_hit": [],
+          "section": "Mistakes that waste the snippet",
+          "priority": "desired"
+        },
+        {
+          "keyword": "seo meta description",
+          "words": 3,
+          "h1": 0,
+          "headings": 0,
+          "body": 0,
+          "alt": 0,
+          "meta": 0,
+          "total": 0,
+          "close": 0,
+          "scattered_body": 0,
+          "headings_hit": [],
+          "section": "A check before you publish",
+          "priority": "desired"
+        }
+      ],
+      "covered": 1,
+      "total": 5,
+      "coverage": 20.0,
+      "min": 50
+    },
+    "lsi": {
+      "label": "LSI vocabulary",
+      "rows": [
+        {
+          "keyword": "search results",
+          "words": 2,
+          "h1": 0,
+          "headings": 0,
+          "body": 3,
+          "alt": 0,
+          "meta": 0,
+          "total": 3,
+          "close": 0,
+          "scattered_body": 0,
+          "headings_hit": [],
+          "priority": "desired"
+        },
+        {
+          "keyword": "snippet",
+          "words": 1,
+          "h1": 0,
+          "headings": 1,
+          "body": 6,
+          "alt": 0,
+          "meta": 0,
+          "total": 7,
+          "close": 0,
+          "scattered_body": 0,
+          "headings_hit": [
+            "Mistakes that waste the snippet"
+          ],
+          "priority": "desired"
+        },
+        {
+          "keyword": "title tag",
+          "words": 2,
+          "h1": 0,
+          "headings": 0,
+          "body": 0,
+          "alt": 0,
+          "meta": 0,
+          "total": 0,
+          "close": 0,
+          "scattered_body": 0,
+          "headings_hit": [],
+          "priority": "desired"
+        },
+        {
+          "keyword": "search intent",
+          "words": 2,
+          "h1": 0,
+          "headings": 0,
+          "body": 0,
+          "alt": 0,
+          "meta": 0,
+          "total": 0,
+          "close": 0,
+          "scattered_body": 0,
+          "headings_hit": [],
+          "priority": "desired"
+        },
+        {
+          "keyword": "character limit",
+          "words": 2,
+          "h1": 0,
+          "headings": 0,
+          "body": 0,
+          "alt": 0,
+          "meta": 0,
+          "total": 0,
+          "close": 0,
+          "scattered_body": 0,
+          "headings_hit": [],
+          "priority": "desired"
+        },
+        {
+          "keyword": "click",
+          "words": 1,
+          "h1": 1,
+          "headings": 0,
+          "body": 6,
+          "alt": 0,
+          "meta": 1,
+          "total": 7,
+          "close": 0,
+          "scattered_body": 0,
+          "headings_hit": [],
+          "priority": "desired"
+        }
+      ],
+      "covered": 3,
+      "total": 6,
+      "coverage": 50.0,
+      "min": 30
+    },
+    "pool": {
+      "label": "Ranked keyword pool",
+      "rows": [
+        {
+          "keyword": "meta description length",
+          "words": 3,
+          "h1": 0,
+          "headings": 0,
+          "body": 1,
+          "alt": 0,
+          "meta": 0,
+          "total": 1,
+          "close": 0,
+          "scattered_body": 0,
+          "headings_hit": [],
+          "section": "How long a meta description should be",
+          "priority": "desired"
+        },
+        {
+          "keyword": "how to write a meta description",
+          "words": 6,
+          "h1": 1,
+          "headings": 0,
+          "body": 0,
+          "alt": 0,
+          "meta": 1,
+          "total": 1,
+          "close": 0,
+          "scattered_body": 0,
+          "headings_hit": [],
+          "priority": "desired"
+        },
+        {
+          "keyword": "meta description examples",
+          "words": 3,
+          "h1": 0,
+          "headings": 0,
+          "body": 0,
+          "alt": 0,
+          "meta": 0,
+          "total": 0,
+          "close": 0,
+          "scattered_body": 0,
+          "headings_hit": [],
+          "section": "Patterns that make a description worth clicking",
+          "priority": "desired"
+        },
+        {
+          "keyword": "seo meta description",
+          "words": 3,
+          "h1": 0,
+          "headings": 0,
+          "body": 0,
+          "alt": 0,
+          "meta": 0,
+          "total": 0,
+          "close": 0,
+          "scattered_body": 0,
+          "headings_hit": [],
+          "section": "A check before you publish",
+          "priority": "desired"
+        },
+        {
+          "keyword": "meta description best practices",
+          "words": 4,
+          "h1": 0,
+          "headings": 0,
+          "body": 0,
+          "alt": 0,
+          "meta": 0,
+          "total": 0,
+          "close": 0,
+          "scattered_body": 0,
+          "headings_hit": [],
+          "section": "Mistakes that waste the snippet",
+          "priority": "desired"
+        },
+        {
+          "keyword": "what is a meta description",
+          "words": 5,
+          "h1": 0,
+          "headings": 0,
+          "body": 0,
+          "alt": 0,
+          "meta": 0,
+          "total": 0,
+          "close": 0,
+          "scattered_body": 0,
+          "headings_hit": [],
+          "section": "What a meta description does",
+          "priority": "desired"
+        }
+      ],
+      "covered": 2,
+      "total": 6,
+      "coverage": 33.3,
+      "min": null,
+      "informational": true
+    }
+  },
+  "checks": [
+    {
+      "name": "Primary keyword in the H1",
+      "status": "ok",
+      "detail": "'meta description' appears 1× in the H1"
+    },
+    {
+      "name": "Primary keyword in H2/H3",
+      "status": "ok",
+      "detail": "2 heading(s) carry it (want ≥1): 'What a meta description does'; 'How long a meta description should be'"
+    },
+    {
+      "name": "Primary keyword in the opening",
+      "status": "ok",
+      "detail": "found in the first 100 words of body prose"
+    },
+    {
+      "name": "Primary keyword count",
+      "status": "ok",
+      "detail": "9 occurrence(s) across H1, headings and body (want ≥3)"
+    },
+    {
+      "name": "Primary keyword density",
+      "status": "ok",
+      "detail": "2.12% (ceiling 2.5%; for reference our comfortable floor is 0.5%)"
+    },
+    {
+      "name": "Secondary targets coverage",
+      "status": "ok",
+      "detail": "2/2 present (100.0%, want ≥50%)"
+    },
+    {
+      "name": "Brief section keywords coverage",
+      "status": "warn",
+      "detail": "1/5 present (20.0%, want ≥50%)"
+    },
+    {
+      "name": "LSI vocabulary coverage",
+      "status": "ok",
+      "detail": "3/6 present (50.0%, want ≥30%)"
+    }
+  ],
+  "verdict": "warn",
+  "failed": 0,
+  "warned": 1,
+  "slug": "how-to-write-a-meta-description",
+  "revision": "a10ba914ecc3b91c"
+}

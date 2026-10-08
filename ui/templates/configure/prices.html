@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% import "_ui.html" as ui %}
+{% set page_title = "Prices" %}
+{% block content %}
+{{ ui.page_header("Prices", sub="What the cost report charges. Model prices ship with the app (as of " ~ (table.as_of or "the release") ~ "); a price set here reprices every call recorded without one.") }}
+<form method="post" action="/settings/prices">
+<section class="panel">
+  <div class="panel-head"><h2 class="panel-title">What you pay</h2></div>
+  {% for r in rows %}
+  <div class="panel-row">
+    <div><label class="label" for="{{ r.key }}">{{ r.label }}{% if r.changed %} {{ ui.status("changed", "green") }}{% endif %}</label>{% if r.help %}<span class="hint">{{ r.help }}</span>{% endif %}</div>
+    <input class="input" id="{{ r.key }}" name="{{ r.key }}" inputmode="decimal" value="{{ r.value }}" placeholder="no price">
+  </div>
+  {% endfor %}
+  <div class="panel-foot">{{ ui.button("Save the prices", "primary") }}<span class="hint">Empty: the service is reported in its own units only.</span></div>
+</section>
+</form>
+<details class="panel panel-more">
+  <summary>The model prices in use <span class="hint">· per million tokens</span></summary>
+  <table class="table">
+    <thead><tr><th>Model</th><th class="num">Input</th><th class="num">Output</th></tr></thead>
+    <tbody>
+    {% for m, p in (table.anthropic or {}).items() %}<tr><td>{{ m }}</td><td class="num">{{ p.input|usd }}</td><td class="num">{{ p.output|usd }}</td></tr>{% endfor %}
+    {% for m, p in (table.openai or {}).items() if p is mapping %}<tr><td>{{ m }}</td><td class="num">{{ (p.input or p.text_input or 0)|usd }}</td><td class="num">{{ (p.output or p.image_output or 0)|usd }}</td></tr>{% endfor %}
+    </tbody>
+  </table>
+</details>
+{% endblock %}

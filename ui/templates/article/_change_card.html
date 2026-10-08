@@ -1,0 +1,48 @@
+{#- One change the machine made: what it changed (a paragraph, a picture), the check's word, and what
+    the person can do with it. In Changed; in Needs you while the check says its problem is still
+    there and nobody kept it as it is (the operator, 2026-10-06). -#}
+<article class="ritem is-made{% if it.type == "half" %} is-half{% endif %}" id="item-{{ it.n }}">
+  <span class="anchor" id="f-{{ it.id }}"></span>
+  <header class="ritem-head">
+    <span class="ritem-n">{{ it.n }}</span>
+    <span class="ritem-place">{{ it.section }}</span>
+    <span class="ritem-meta">{% if it.kept_as_is %}{{ ui.status("kept as it is", "gray", quiet=True) }}{% elif it.adjusted %}{{ ui.status(it.adjusted.how or "adjusted by hand", "gray", quiet=True) }}{% else %}{{ ui.check_chip(it.check, it.check_note) }}{% endif %}</span>
+  </header>
+  <div class="ritem-body">
+    <p class="ritem-title">{{ it.title }}</p>
+    {% if it.type == "half" %}<p class="hint ritem-will">Made, but the check says the problem is still there{% if it.check_note %}: {{ it.check_note }}{% endif %}</p>{% endif %}
+    {% if it.kept_as_is %}<p class="hint">The check said the problem was still there; kept as it is by {{ it.kept_by }}.</p>{% endif %}
+    {% if it.adjusted %}<p class="hint">The check said the problem was still there; {{ it.adjusted.how or "adjusted by hand" }} by {{ it.adjusted_by }}{% if it.adjusted.version_n %} in v{{ it.adjusted.version_n }}{% endif %}.</p>{% endif %}
+    {% for p in it.places %}
+      {% if p.picture %}<div class="ritem-pics">
+        {% if p.before %}<figure class="ritem-pic"><button type="button" class="pic-zoom" data-zoom="{{ p.before }}" aria-label="Look at the picture before, large"><img src="{{ p.before }}" alt="" loading="lazy"></button><figcaption><span>Before</span></figcaption></figure>{% endif %}
+        <figure class="ritem-pic"><button type="button" class="pic-zoom" data-zoom="{{ base }}/{{ p.picture }}" aria-label="Look at the new picture, large"><img src="{{ base }}/{{ p.picture }}" alt="" loading="lazy"></button><figcaption><span>{{ "Made again" if p.before else "New" }}</span><span class="id">{{ p.picture }}</span></figcaption></figure>
+      </div>
+      {% if it.check_note %}<p class="hint ritem-check">{{ it.check_note }}</p>{% endif %}
+      {% elif p.html is not none %}<div class="ritem-context prose" data-context>{{ p.html }}</div>
+        {% for old, new in p.links %}<p class="hint ritem-link">The link: {% if old %}<span class="id">{{ old }}</span>{% else %}none{% endif %} → {% if new %}<a class="id" href="{{ new }}" target="_blank" rel="noopener">{{ new }}</a>{% else %}removed{% endif %}</p>{% endfor %}
+      {% else %}<div class="ritem-context change-text"><span class="hint">{{ p.where }}:</span> {{ p.before|word_diff(p.after) }}</div>{% endif %}
+    {% endfor %}
+    {% if it.edit_md and version %}{% with item=it, finding="" %}{% include "article/_paragraph_form.html" %}{% endwith %}{% endif %}
+  </div>
+  {% if version and editing != it.id %}
+  <footer class="ritem-foot">
+    {% if it.latest %}
+      <form method="post" action="{{ base }}/revert/{{ it.id }}" class="inline">
+        <input type="hidden" name="version" value="{{ version }}">
+        {{ ui.button("Revert", "secondary", size="sm", icon_name="undo-2") }}
+      </form>
+    {% endif %}
+    {% if it.edit_md %}{{ ui.text_action("Adjust it yourself", href="?tab=review&edit=" ~ it.id ~ "#item-" ~ it.n, attrs={"data-edit": "item-" ~ it.n}) }}{% endif %}
+    {% if it.type == "half" %}
+      <form method="post" action="{{ base }}/keep/{{ it.id }}" class="inline">
+        <input type="hidden" name="version" value="{{ version }}"><input type="hidden" name="anchor" value="item-{{ it.n }}">
+        {{ ui.text_action("Keep it as it is", attrs={"data-keep": it.id}) }}
+      </form>
+    {% endif %}
+    {% if it.reverts == "picture" %}<span class="hint">{% if it.v %}v{{ it.v }}: {% endif %}the picture reverts on its own while it and its caption stay as made.</span>
+    {% elif it.latest %}<span class="hint">{% if it.v %}v{{ it.v }}, {% endif %}the latest: it reverts until something else changes.</span>
+    {% else %}<span class="hint">{% if it.v %}v{{ it.v }}: {% endif %}changes came after it, so it is undone in <a href="?tab=history">History</a>.</span>{% endif %}
+  </footer>
+  {% endif %}
+</article>

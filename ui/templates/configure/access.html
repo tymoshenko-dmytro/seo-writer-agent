@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+{% import "_ui.html" as ui %}
+{% set page_title = "Access" %}
+{#- Who may open the Studio (core/access.py): its password changed, turned off, or set again. The
+    current password first while one is in force; a change signs every other browser out. -#}
+{% block content %}
+{{ ui.page_header("Access", sub="Who may open the Studio.") }}
+<section class="panel">
+  <div class="panel-head"><h2 class="panel-title">Now</h2></div>
+  <div class="panel-row">
+    {% if mode == "password" %}
+    <div>{{ ui.status("A password is needed", "green") }}<span class="hint">{{ "Set here, in the Studio." if source == "studio" else "The server's own (UI_PASSWORD)." }}</span></div>
+    {% elif mode == "off" %}
+    <div>{{ ui.status("No password", "yellow") }}<span class="hint">Anyone who reaches the Studio can use it. Keep it behind something that checks who comes in (here, Cloudflare Access).</span></div>
+    {% else %}
+    <div>{{ ui.status("This computer only", "gray") }}<span class="hint">No password is set, so the Studio answers only on this computer.</span></div>
+    {% endif %}
+  </div>
+</section>
+
+<form method="post" action="/settings/access" class="panel">
+  <input type="hidden" name="what" value="password">
+  <div class="panel-head"><h2 class="panel-title">{{ "Change the password" if mode == "password" else "Set a password" }}</h2></div>
+  {% if mode == "password" %}
+  <div class="panel-row"><label class="label" for="cur-1">The current password</label><input class="input" type="password" id="cur-1" name="current" autocomplete="current-password" required></div>
+  {% endif %}
+  <div class="panel-row"><div><label class="label" for="new">The new password</label><span class="hint">At least {{ min_length }} characters.</span></div><input class="input" type="password" id="new" name="new" minlength="{{ min_length }}" autocomplete="new-password" required></div>
+  <div class="panel-row"><label class="label" for="again">The new password again</label><input class="input" type="password" id="again" name="again" minlength="{{ min_length }}" autocomplete="new-password" required></div>
+  <div class="panel-foot">{{ ui.button("Save the password", "primary") }}<span class="hint">Other browsers sign in again with it.</span></div>
+</form>
+
+{% if mode != "off" %}
+<form method="post" action="/settings/access" class="panel">
+  <input type="hidden" name="what" value="off">
+  <div class="panel-head"><h2 class="panel-title">Turn the password off</h2></div>
+  {% if mode == "password" %}
+  <div class="panel-row"><label class="label" for="cur-2">The current password</label><input class="input" type="password" id="cur-2" name="current" autocomplete="current-password" required></div>
+  {% endif %}
+  <div class="panel-row"><label class="check"><input type="checkbox" name="sure" value="1" required> Anyone who reaches the Studio can use it: generate, edit, publish and spend.</label></div>
+  <div class="panel-foot">{{ ui.button("Turn it off", "secondary") }}</div>
+</form>
+{% endif %}
+<p class="hint">Locked out: set UI_ACCESS_RESET=1 on the server and restart; the server's own password (UI_PASSWORD) opens it again.</p>
+{% endblock %}

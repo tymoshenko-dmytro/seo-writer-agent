@@ -1,0 +1,14 @@
+{#- The person's own words for one paragraph: its Markdown in a text box (with JavaScript, the
+    block editor in its place), saved as a new version under the version check. -#}
+<form class="ritem-editor" method="post" action="{{ base }}/paragraph" data-editor{% if editing != item.id %} hidden{% endif %}>
+  <input type="hidden" name="version" value="{{ version }}">
+  <input type="hidden" name="finding" value="{{ finding }}">
+  <input type="hidden" name="anchor" value="{{ ('f-' ~ finding) if finding else ('item-' ~ item.n) }}">
+  <textarea name="before" hidden>{{ item.edit_md }}</textarea>
+  <label class="visually-hidden" for="para-{{ item.n }}">The paragraph</label>
+  <textarea class="textarea ritem-md" id="para-{{ item.n }}" name="after" rows="{{ [3, (item.edit_md|length // 70) + 2]|max }}">{{ item.edit_md }}</textarea>
+  <div class="ritem-editbar">
+    {{ ui.button("Save the paragraph", "secondary", size="sm") }}{{ ui.text_action("Cancel", href="?tab=review#item-" ~ item.n, attrs={"data-edit-cancel": ""}) }}
+    <span class="hint">{% if finding %}Saved as a new version; the item moves to Changed, by you.{% elif item.type == "half" %}Saved as a new version on top of the machine's; the change leaves Needs you, adjusted by you.{% else %}Saved as a new version on top of the machine's.{% endif %}</span>
+  </div>
+</form>

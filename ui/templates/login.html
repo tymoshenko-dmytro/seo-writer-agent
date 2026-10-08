@@ -1,0 +1,24 @@
+{% extends "_page.html" %}
+{% set page_title = "Log in" %}
+{% block body %}
+<main class="center-page">
+  <form class="center-card" method="post">
+    <div class="center-brand">
+      {% if shell.logo and shell.logo.shape == "wordmark" %}
+      <img class="workspace-wordmark" src="{{ shell.logo.url }}" alt="{{ shell.project }}">
+      {% else %}
+      {% if shell.logo %}<img class="workspace-logo" src="{{ shell.logo.url }}" alt="">
+      {% else %}<span class="workspace-mark" aria-hidden="true">{{ shell.initial }}</span>{% endif %}
+      <span class="center-name">{{ shell.project }}</span>
+      {% endif %}
+      {% if shell.project != shell.product %}<span class="hint">{{ shell.product }}</span>{% endif %}
+    </div>
+    <h1 class="visually-hidden">Log in to {{ shell.project }}</h1>
+    <div class="field">
+      <label class="label" for="pw">Password</label>
+      <input class="input" type="password" name="password" id="pw" autocomplete="current-password" required autofocus>
+    </div>
+    {{ ui.button("Log in", "primary", block=True) }}
+  </form>
+</main>
+{% endblock %}

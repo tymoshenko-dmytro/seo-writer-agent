@@ -1,0 +1,14 @@
+<li class="{{ 'is-current' if v.current }}">
+  <div class="v-head"><span class="v-n">v{{ v.n }}</span><span class="v-what">{{ v.what }}</span>{% if v.current %}<span class="hint">now</span>{% endif %}</div>
+  <div class="hint">{{ v.when }} · {{ v.who }}{% if v.detail %} · {{ v.detail }}{% endif %}</div>
+  {% if v.marks %}<div class="chip-row">{% for m, col in v.marks %}{{ ui.status(m, col) }}{% endfor %}</div>{% endif %}
+  {% if not v.current %}
+  <div class="v-actions">
+    <a class="text-action" href="{{ base }}/v/{{ v.n }}" data-leave>Compare with now</a>
+    <form method="post" action="{{ base }}/v/{{ v.n }}/restore" class="inline" data-restore-form>
+      <input type="hidden" name="version" value="{{ version }}"><input type="hidden" name="back" value="edit">
+      {{ ui.text_action("Restore") }}
+    </form>
+  </div>
+  {% endif %}
+</li>

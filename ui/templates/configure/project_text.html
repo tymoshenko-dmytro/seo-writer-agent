@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{% import "_ui.html" as ui %}
+{#- One project text (a value the prompts are filled with): edit it, or restore the original. -#}
+{% set page_title = field.label %}
+{% block content %}
+<a class="crumb" href="/settings/project#texts">{{ icon("arrow-left", 14) }}Project</a>
+<header class="page-header">
+  <div class="page-heading"><h1 class="page-title">{{ field.label }}</h1></div>
+  <p class="page-meta">{{ "edited by your team" if changed else "the original" }}<span class="sep">·</span><span class="slot">{{ '{{' }}{{ field.key }}{{ '}}' }}</span>{% if prompts %}<span class="sep">·</span>used by {{ prompts|join(", ") }}{% endif %}</p>
+</header>
+<p class="hint text-help">{{ field.help }}</p>
+<form method="post" action="/settings/project/{{ field.key }}" class="text-edit">
+  {% if field.line %}<input class="input" type="text" name="text" value="{{ text }}" spellcheck="false" aria-label="{{ field.label }}">
+  {% else %}<textarea class="textarea is-code" name="text" rows="{{ 34 if field.key == 'product_facts' else 16 }}" spellcheck="false" aria-label="{{ field.label }}">{{ text }}</textarea>{% endif %}
+  <div class="save-bar">
+    {{ ui.button("Save", "primary") }}
+    {% if changed %}{{ ui.button("Restore original", "ghost", name="action", value="reset", attrs={"data-confirm": "Restore the original text? Your edit is deleted."}) }}{% endif %}
+    <span class="hint">{% if changed %}Your team's edit, kept with the articles; the original ships with the app.{% else %}The original that ships with the app.{% endif %}</span>
+  </div>
+</form>
+{% endblock %}
+{% block scripts %}<script src="{{ url_for('static', filename='js/configure.js', v=asset_v('js/configure.js')) }}" defer></script>{% endblock %}

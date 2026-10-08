@@ -1,0 +1,69 @@
+/* SEO Writer Agent: the design tokens.
+   Every component in ui.css reads these and names no colour, size or font of its own. There is
+   no accent and no per-project colour: one neutral palette for every install, and colour only
+   where it means a state. Dark mode is not built yet; the names leave room for it. */
+
+@font-face{
+  font-family:"Inter"; font-style:normal; font-weight:400 700; font-display:swap;
+  src:url("fonts/inter/InterVariable.woff") format("woff");
+}
+@font-face{
+  font-family:"Inter"; font-style:italic; font-weight:400 700; font-display:swap;
+  src:url("fonts/inter/InterVariable-Italic.woff") format("woff");
+}
+@font-face{
+  font-family:"JetBrains Mono"; font-style:normal; font-weight:400 600; font-display:swap;
+  src:url("fonts/jetbrains-mono/JetBrainsMono.woff") format("woff");
+}
+
+:root{
+  /* surfaces and ink */
+  --canvas:#F7F6F3;       /* the page */
+  --surface:#FFFFFF;      /* cards, tables, inputs */
+  --sunken:#F1F0EC;       /* the sidebar, code, quiet blocks */
+  --line:#E6E4DF;         /* hairlines, borders */
+  --ink:#1F1E1B;          /* text; the primary button's fill */
+  --muted:#6B6966;        /* secondary text and hints (5:1 on the canvas) */
+  --faint:#9B9893;        /* placeholders, disabled, decoration only: below AA for text */
+  --focus:rgb(51 126 169 / .4);   /* the keyboard focus ring */
+  --hover:rgb(31 30 27 / .05);    /* a quiet row or item under the pointer */
+  --scrim:rgb(31 30 27 / .32);    /* behind a dialog */
+
+  /* the states, one meaning each (Notion's tag palette). `--x` is the state's colour (dots,
+     charts, borders); `--x-text` is the same hue darkened to meet WCAG AA as text on its tint,
+     on the surface and on the canvas (principle 9); `--x-tint` is its background. */
+  --gray:#787774;   --gray-text:#6F6E6B;   --gray-tint:#F1F1EF;    /* not reviewed, not sent, not checked */
+  --green:#448361;  --green-text:#3F795A;  --green-tint:#EDF3EC;   /* changed, accepted, sent, clear */
+  --yellow:#CB912F; --yellow-text:#916822; --yellow-tint:#FBF3DB;  /* open, a proposal, changed since */
+  --orange:#D9730D; --orange-text:#A6580A; --orange-tint:#FBECDD;  /* live on the blog */
+  --blue:#337EA9;   --blue-text:#2F749B;   --blue-tint:#E7F3F8;    /* a job running, a note */
+  --red:#D44C47;    --red-text:#C8342F;    --red-tint:#FDEBEC;     /* failed, unknown outcome, could not run */
+
+  /* type */
+  --font-sans:"Inter",-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
+  --font-mono:"JetBrains Mono",ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  --text-body:15px;    --leading-body:24px;
+  --text-small:13px;   --leading-small:20px;
+  --text-control:14px; --leading-control:20px;
+  --text-title:28px;   --leading-title:36px;
+  --text-section:20px; --leading-section:28px;
+  --text-label:12px;   --tracking-label:.04em;
+  --text-doc:17px;     --leading-doc:28px;
+  --text-big:32px;     --leading-big:40px;      /* one big number on a card */
+
+  /* space, on a 4 px scale */
+  --s1:4px; --s2:8px; --s3:12px; --s4:16px; --s6:24px; --s8:32px; --s12:48px;
+
+  /* shape */
+  --radius-card:8px;
+  --radius-control:6px;
+  --radius-full:999px;
+  --shadow-pop:0 12px 32px rgb(31 30 27 / .14),0 2px 6px rgb(31 30 27 / .08);  /* popovers, dialogs only */
+
+  /* layout */
+  --sidebar-width:248px;
+  --content-max:1200px;
+  --doc-width:720px;
+  --control-height:32px;
+  --row-height:48px;
+}

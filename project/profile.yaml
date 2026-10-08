@@ -1,0 +1,60 @@
+# The project: the product the articles are written for. A new install starts empty and the setup
+# fills it (the web setup at /setup, or `cli.py setup`): what is saved there lives on the data
+# volume and is laid over this file, so a release never undoes it. Edit this file only to ship
+# defaults with your own build of the image.
+
+name: ""          # the project's name; the setup's "Its name"
+audience: ""      # who the articles are for, in one line
+
+# Who we are, as the engine needs it (core/brand.py). The setup saves the domains; Configure >
+# Project saves the rest.
+brand:
+  domains: []             # our own domains: internal links, sources the fixer may use, what the
+                          # uniqueness check does not match against
+  # logo: "assets/logo.png"   # a logo shipped with the image; the one uploaded in the setup wins
+  palette: {}             # the charts' and infographics' colours: ink, muted, accent, accent_2,
+                          # line, soft (hex). Empty: a neutral palette
+  headline_acronyms: []   # words kept upper-case in cover headlines (AI, API, FAQ, SEO… already are)
+
+publish:
+  base_url: ""            # the blog's address for the search preview; the setup's "The blog's address"
+  author_id:              # the WordPress user the posts carry; picked in Connections after the test
+
+# The internal-link index (core/tools/link_index.py), built from the public sitemaps by the first
+# run, by `cli.py refresh-links` or by Connections > Rebuild now.
+links:
+  # site_sitemap: ""      # unset: https://<our domain>/sitemap.xml; "" turns it off
+  # blog_sitemap: ""      # unset: <the blog's address>/sitemap_index.xml (WordPress with Yoast)
+  blog_base_url: ""
+  ttl_days: 1             # rebuilt when older than this: a post published today is linkable tomorrow
+  per_article: 12         # candidates offered to the writer
+  words_per_link: 350     # one internal link per N words
+  min_product_links: 2    # links to our own product pages (not blog posts) an article needs
+  # Hosts we compete with in the search results. On their domains only a document may be linked
+  # (the paths below); their product, pricing and comparison pages are cited in prose instead.
+  # Configure > Project > Competitors saves the list.
+  competitor_hosts: []
+  competitor_doc_paths:   # the only paths linkable on a competitor host
+    - "/docs"
+    - "/support"
+    - "/help"
+    - "/hc/"
+    - "/answer/"
+    - "/resources/"
+    - "/research/"
+    - ".pdf"
+  exclude:                # never offered as link targets (regular expressions)
+    - "/author/"
+    - "/wp-content/"
+    - "/tag/"
+
+# The project's texts (core/project_texts.py): empty here, written in the setup or in Configure >
+# Project, and saved on the data volume.
+brand_file: "brand.md"
+products_file: "products.md"
+editorial_rules_file: "editorial_rules.md"
+chart_style: "chart_style.mplstyle"
+
+content:
+  categories: []          # WordPress categories offered under Configure > Publishing; the
+                          # connection test reads the site's own

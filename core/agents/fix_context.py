@@ -33,6 +33,11 @@ def allowed_urls(project, state, original: str) -> set:
     # replacing an invented CTA with our app's sign-up page was refused as "not in the research"
     for u in _FACTS_URL.findall(project.product_facts or ""):
         allowed.add(u.rstrip(".,;"))
+    # what the project's own research sources cite for this article (core/research_sources.py)
+    from ..research_sources import cited_urls
+
+    for u in cited_urls(getattr(state, "output_dir", None), project):
+        allow(u)
     idx = LinkIndex.load(project.root)
     if idx:
         allowed |= {t.url for t in idx.targets}

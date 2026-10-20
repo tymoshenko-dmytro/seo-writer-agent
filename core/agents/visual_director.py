@@ -443,7 +443,10 @@ class VisualDirector(BaseAgent):
                         built, diag = self._shoot(url, png, caption, seen, selector=sel, focus=terms)
                         fallback = "retry" if built else None
                     if not built:
-                        for alt in _alt_pages(state.research, url)[:2]:
+                        # a page a research source leaves out is never a substitute either
+                        alts = [u for u in _alt_pages(state.research, url)
+                                if not research_sources.leaves_out(out, u, self.project)]
+                        for alt in alts[:2]:
                             # a substitute is captioned by its own title, so it is judged as a
                             # clean page, not against the writer's caption
                             ok2, d2 = self._shoot(alt, png, None, seen, focus=terms)

@@ -404,13 +404,14 @@ def generate_article(topic: str, status_callback=None, on_folder=None, **overrid
 
         # the reports of the stages this run reuses instead of running: without them the new
         # folder's trail started at the draft (webinar, ai-interpreter on prod, 2026-09-29)
-        # and what the project's own research sources kept in it (core/research_sources.py: a
-        # pinned snapshot), so the inputs really are the same
-        from .research_sources import keep_files
-
-        for name in ("01_keyword_research.md", "02_brief.md", "03_research.md", *keep_files(project)):
+        for name in ("01_keyword_research.md", "02_brief.md", "03_research.md"):
             if (src_dir / name).exists():
                 shutil.copyfile(src_dir / name, art.path(name))
+        # and what the project's own research sources kept in it (core/research_sources.py: a
+        # pinned snapshot), so the inputs really are the same
+        from .research_sources import copy_kept
+
+        copy_kept(src_dir, art.dir, project)
     else:
         art = repo.reserve(slugify(topic))
     state.slug, state.output_dir = art.slug, str(art.dir)

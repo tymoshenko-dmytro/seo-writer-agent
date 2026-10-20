@@ -19,6 +19,7 @@ from pathlib import Path
 from .base import BaseAgent
 from .fix_routing import same_page
 from .visual_director import REFRAMES, ShotLook, _focus_terms, next_free
+from .. import research_sources
 from ..producers import charts, infographic, screenshot, image_gen
 from ..tools import scrapfly
 from ..store import atomic_write_text, safe_words
@@ -254,15 +255,25 @@ class VisualProducerService(BaseAgent):
             for fact in (f.get("facts") or [])[:2]:
                 v = f" = {fact['value']}" if fact.get("value") else ""
                 L.append(f"- {fact.get('claim','')}{v}")
-        srcs = [f"- {s.get('title') or ''} | {s.get('url')}" for s in (r.get("sources") or [])[:15]]
-        return ("FACTS (numbers may only come from here):\n" + "\n".join(L[:40]) +
-                "\n\nSOURCES (screenshot-able URLs):\n" + "\n".join(srcs)) if L or srcs else "(no research facts)"
+        # what the project's own research sources give this article, and the pages they leave out
+        # of it (core/research_sources.py): a picture made or made again here reads what the
+        # article's first charts read
+        own = research_sources.corpus_blocks(d, self.project)
+        srcs = [f"- {s.get('title') or ''} | {s.get('url')}" for s in (r.get("sources") or [])
+                if not research_sources.leaves_out(d, (s or {}).get("url"), self.project)][:15]
+        if not (L or srcs or own):
+            return "(no research facts)"
+        return ("FACTS (numbers may only come from here):\n" + "\n".join(L[:40])
+                + (f"\n\n{own}" if own else "")
+                + "\n\nSOURCES (screenshot-able URLs):\n" + "\n".join(srcs))
 
     def _render(self, d: Path, producer: str, spec: dict, out_png: Path, focus_text: str = "",
                 diag: dict | None = None) -> str | None:
         if producer == "chart":
-            style = self.project.root / (self.project.chart_style or "")
-            return charts.build(spec, str(out_png), style_path=str(style) if style.exists() else None)
+            # the project's chart style when it names one that is a file: without one, the project's
+            # folder itself was passed as the style and every chart made here failed to render
+            style = self.project.root / self.project.chart_style if self.project.chart_style else None
+            return charts.build(spec, str(out_png), style_path=str(style) if style and style.is_file() else None)
         if producer == "infographic":
             logo = self.project.brand.logo_file()   # None: the project has no logo
             return infographic.render(spec, str(out_png), logo_png=str(logo) if logo else None,
@@ -270,6 +281,12 @@ class VisualProducerService(BaseAgent):
         if producer == "screenshot":
             url = (spec or {}).get("url", "")
             if not url.startswith("http"):
+                return None
+            if research_sources.leaves_out(d, url, self.project):
+                # a page the project's own research source leaves out of this article is never
+                # captured, whichever place offered it
+                if diag is not None:
+                    diag["reason"] = "left out of this article by a research source"
                 return None
             # never the whole page: a support article captured whole is several screens of text
             # in the post (the Zoom article). The capture is one screen, scrolled to the block

@@ -59,7 +59,8 @@ Data your project reads by itself that the web research cannot find (a leaderboa
 JavaScript, an internal price list) can join the research for the articles it is meant for: a
 Python file in the project folder, `research_sources/<name>.py`, with `gate()` (is this article
 in its scope; it keeps its decision in the article's folder), `corpus_block()` (what it adds to
-the research every agent reads) and, optionally, `leaves_out()` (pages the article must not use)
+the research every agent reads; a URL in it written `[source: https://…]` may be cited like a
+researched source) and, optionally, `leaves_out()` (pages the article must not use)
 and `KEEP` (files a rerun copies). The contract is at the top of `core/research_sources.py`. It
 is code from your own project folder, run as the Studio: nothing in the interface adds one.
 Without the folder nothing changes.

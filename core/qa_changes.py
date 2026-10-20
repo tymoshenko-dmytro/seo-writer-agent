@@ -295,7 +295,10 @@ class Work:
         self.allowed = fix_context.allowed_urls(project, self.state, self.body)
         self.exempt = fix_context.sanctioned_names(project, self.state)
         self.context = fix_context.context_block(project, self.state, target)
-        self.research_urls = _research_urls(self.state.research)
+        # the research's sources, and what the project's own research sources cite for this article
+        from .research_sources import cited_urls
+
+        self.research_urls = _research_urls(self.state.research) | cited_urls(self.state.output_dir, project)
         self.applier = FixApplier(project, config)
         self.made: list[dict] = []
 

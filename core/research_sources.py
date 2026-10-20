@@ -16,16 +16,20 @@ setting.
         # when a review rebuilds an article's state; the source keeps its decision in the
         # article's folder, so every later pass reads what the writer read
     def corpus_block(article_dir, project) -> str
-        # added after the research in the one view every agent reads; "" for nothing
+        # added after the research in the one view every agent reads; "" for nothing. A URL
+        # written in it as "[source: https://…]", the research's own mark, may be cited and
+        # linked by the fixer like a researched source
+
     def leaves_out(article_dir, url) -> bool
         # optional: a source or a screenshot target this article must not use
 
-A source that fails to load or to answer is logged and left out: it never fails a run.
+A source that fails to load or to answer, or names files it may not keep, is logged and left out:
+it never fails a run. Each load runs the file's current text (never a cached bytecode).
 """
 from __future__ import annotations
 
-import importlib.util
 import logging
+import re
 import sys
 from pathlib import Path
 from types import ModuleType
@@ -41,34 +45,49 @@ def _root(project) -> Path | None:
 
 
 def sources(project) -> list[ModuleType]:
-    """The project's sources, loaded once per folder and its files' times."""
+    """The project's sources, loaded once per folder and its files' times and sizes."""
     root = _root(project)
     folder = root / DIR if root else None
-    if not folder or not folder.is_dir():
+    try:
+        if not folder or not folder.is_dir():
+            return []
+        files = sorted(p for p in folder.glob("*.py") if not p.name.startswith("_"))
+    except OSError as e:
+        _log.warning("research sources could not be listed: %s", e)
         return []
-    files = sorted(p for p in folder.glob("*.py") if not p.name.startswith("_"))
-    key = (str(folder.resolve()), tuple((p.name, p.stat().st_mtime_ns) for p in files))
+    stamps = []
+    for p in files:
+        try:
+            st = p.stat()
+        except OSError as e:          # a dangling link, a file gone meanwhile: that one is left out
+            _log.warning("research source %s could not be read: %s", p.name, e)
+            continue
+        stamps.append((p, st.st_mtime_ns, st.st_size))
+    key = (str(folder.resolve()), tuple((p.name, m, n) for p, m, n in stamps))
     if key not in _LOADED:
-        loaded = []
-        for p in files:
-            name = f"research_source_{p.stem}"
-            try:
-                spec = importlib.util.spec_from_file_location(name, p)
-                mod = importlib.util.module_from_spec(spec)
-                # registered before it runs, as an import is: a dataclass (or anything else that
-                # looks its module up) in the source needs it
-                sys.modules[name] = mod
-                spec.loader.exec_module(mod)
-            except Exception as e:  # noqa: BLE001 — a broken source is left out, never a failed run
-                sys.modules.pop(name, None)
-                _log.warning("research source %s could not be loaded: %s", p.name, e)
-                continue
-            if not callable(getattr(mod, "gate", None)) or not callable(getattr(mod, "corpus_block", None)):
-                _log.warning("research source %s has no gate() and corpus_block(): left out", p.name)
-                continue
-            loaded.append(mod)
-        _LOADED[key] = loaded
+        _LOADED[key] = [mod for mod in (_load(p) for p, _, _ in stamps) if mod is not None]
     return _LOADED[key]
+
+
+def _load(p: Path) -> ModuleType | None:
+    """One source, from its file's current text: compiled here, so a bytecode cache that matches
+    an older text by its time and size is never run instead."""
+    name = f"research_source_{p.stem}"
+    mod = ModuleType(name)
+    mod.__file__ = str(p)
+    # registered before it runs, as an import is: a dataclass (or anything else that looks its
+    # module up) in the source needs it
+    sys.modules[name] = mod
+    try:
+        exec(compile(p.read_text(encoding="utf-8"), str(p), "exec"), mod.__dict__)
+    except Exception as e:  # noqa: BLE001 — a broken source is left out, never a failed run
+        sys.modules.pop(name, None)
+        _log.warning("research source %s could not be loaded: %s", p.name, e)
+        return None
+    if not callable(getattr(mod, "gate", None)) or not callable(getattr(mod, "corpus_block", None)):
+        _log.warning("research source %s has no gate() and corpus_block(): left out", p.name)
+        return None
+    return mod
 
 
 def name_of(src: ModuleType) -> str:
@@ -118,12 +137,50 @@ def leaves_out(article_dir, url, project) -> bool:
     return False
 
 
+_CITED = re.compile(r"\[source:\s*(https?://[^\]\s]+)\s*\]")
+
+
+def cited_urls(article_dir, project) -> set[str]:
+    """The URLs the sources' blocks for this article mark "[source: …]": what the fixer may link,
+    as it may link a researched source (the review asked for the citation it saw)."""
+    return set(_CITED.findall(corpus_blocks(article_dir, project)))
+
+
 def keep_files(project) -> tuple[str, ...]:
-    """The files a rerun copies from its source folder, for every source."""
+    """The files a rerun copies from its source folder, for every source: plain names only (a
+    source whose KEEP is not a list of names is logged and its KEEP left out)."""
     out: list[str] = []
     for src in sources(project):
-        for name in getattr(src, "KEEP", ()) or ():
-            name = str(name)
+        keep = getattr(src, "KEEP", ()) or ()
+        if isinstance(keep, str) or not isinstance(keep, (tuple, list)):
+            _log.warning("research source %s: KEEP is not a list of file names: left out", name_of(src))
+            continue
+        for name in keep:
+            if not isinstance(name, str):
+                _log.warning("research source %s: KEEP holds %r, not a file name: left out", name_of(src), name)
+                continue
             if name and "/" not in name and "\\" not in name and name not in (".", "..") and name not in out:
                 out.append(name)
     return tuple(out)
+
+
+def copy_kept(src_dir, dst_dir, project) -> list[str]:
+    """A rerun's copy of what the sources keep: each a regular file inside the source folder (not a
+    link, not a folder), copied as its bytes; what cannot be copied is logged, never a failed run."""
+    import shutil
+
+    src_dir, dst_dir, done = Path(src_dir), Path(dst_dir), []
+    base = src_dir.resolve()
+    for name in keep_files(project):
+        p = src_dir / name
+        try:
+            if not p.exists() and not p.is_symlink():
+                continue
+            if p.is_symlink() or not p.is_file() or p.resolve().parent != base:
+                _log.warning("research sources: %s in %s is not a plain file of the article: not copied", name, src_dir.name)
+                continue
+            shutil.copyfile(p, dst_dir / name, follow_symlinks=False)
+            done.append(name)
+        except OSError as e:
+            _log.warning("research sources: %s could not be copied: %s", name, e)
+    return done

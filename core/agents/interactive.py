@@ -416,6 +416,9 @@ class VisualProducerService(BaseAgent):
         """A new visual for the spot between `before` and `after`. A screenshot of a page in
         `avoid_urls` (the pages the article already shows) is refused before it is taken."""
         d = Path(article_dir)
+        # the project's own research sources decide for this article before anything here reads
+        # them (an article written or imported before they did)
+        research_sources.decide(d, self.project)
         assets = d / "assets"
         assets.mkdir(parents=True, exist_ok=True)
 
@@ -481,6 +484,7 @@ Pick the producer, build the spec per your instructions. Return ONLY the JSON.""
         to pick). The file keeps its name; the sidecar says what made it. {"ok", "path", "alt",
         "caption"} or {"error"}."""
         d = Path(article_dir)
+        research_sources.decide(d, self.project)       # as in create(), before any read of them
         p = (d / rel_path).resolve()
         if not p.exists() or (d / "assets").resolve() not in p.parents:
             return {"error": "asset not found"}

@@ -228,3 +228,27 @@ def test_the_projects_editorial_rules_reach_the_plan_the_text_and_the_pictures(t
     cls = getattr(importlib.import_module(f"core.agents.{mod}"), agent)
     text = cls(load_project(core=cfg), cfg).system_prompt()
     assert "RULE-7: never chart a price without its date." in text and "{{editorial_rules}}" not in text
+
+
+@pytest.mark.parametrize("topic,reads", [("a never-matches topic", True), ("off topic", False)])
+def test_the_studio_decides_for_an_old_article_before_a_picture_reads_the_sources(tmp_path, monkeypatch, topic, reads):
+    """An article written or imported before a source decided: the Studio's picture producer runs the
+    source's gate from the article's own topic before it reads anything, so a topic the source
+    leaves out never gets its rows (nor a pin the next review would keep)."""
+    import json as _json
+
+    from core.agents.interactive import VisualProducerService
+    from core.config import load_core_config, load_project
+
+    project = _project(tmp_path, off_word="off topic")
+    monkeypatch.setenv("CONTENT_PROJECT_DIR", str(project))
+    monkeypatch.setenv("CONTENT_OUTPUT_DIR", str(tmp_path / "out"))
+    art = tmp_path / "out" / "old-article"
+    art.mkdir(parents=True)
+    (art / "_run.json").write_text(_json.dumps({"topic": topic, "research": {}}), encoding="utf-8")
+    seen = []
+    monkeypatch.setattr(VisualProducerService, "call_claude_json", lambda self, user, **kw: (seen.append(user), ({}, "{}"))[1])
+    cfg = load_core_config()
+    VisualProducerService(load_project(core=cfg), cfg).create(art, "Chart the measurements.", "", "")
+    assert seen and ("BOARD ROWS" in seen[0]) is reads
+    assert art.joinpath("_board_snapshot.json").exists() is reads and art.joinpath("_no_board").exists() is not reads

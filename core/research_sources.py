@@ -112,6 +112,24 @@ def gate_all(article_dir, topic: str, keyword: str, project) -> list[str]:
     return off
 
 
+def decide(article_dir, project) -> list[str]:
+    """`gate_all` for an article from its own record (the run's topic and primary keyword): what the
+    Studio does before its first read of an article written or imported before a source decided,
+    so a picture made there never reads, or pins, what the article's topic leaves out."""
+    import json
+
+    if not article_dir or not sources(project):
+        return []
+    try:
+        run = json.loads((Path(article_dir) / "_run.json").read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        run = {}
+    run = run if isinstance(run, dict) else {}
+    topic = str(run.get("topic") or (run.get("brief") or {}).get("title") or "")
+    keyword = str((run.get("keyword_research") or {}).get("primary_keyword") or "")
+    return gate_all(article_dir, topic, keyword, project)
+
+
 def corpus_blocks(article_dir, project) -> str:
     """What the sources add to the research of this article, in their files' order."""
     if not article_dir:

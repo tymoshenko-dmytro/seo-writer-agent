@@ -252,3 +252,17 @@ def test_the_studio_decides_for_an_old_article_before_a_picture_reads_the_source
     VisualProducerService(load_project(core=cfg), cfg).create(art, "Chart the measurements.", "", "")
     assert seen and ("BOARD ROWS" in seen[0]) is reads
     assert art.joinpath("_board_snapshot.json").exists() is reads and art.joinpath("_no_board").exists() is not reads
+
+
+def test_an_article_without_a_run_record_is_decided_by_its_folder_name(tmp_path, monkeypatch):
+    """An imported article may carry no _run.json: its topic is its folder's name, as a review
+    rebuilds it, so a picture made first does not decide differently than the review would."""
+    from core import research_sources
+    from types import SimpleNamespace
+
+    project = SimpleNamespace(root=_project(tmp_path, off_word="zoom"), defaults={})
+    on, off = tmp_path / "out" / "widget-latency", tmp_path / "out" / "zoom-translation"
+    on.mkdir(parents=True)
+    off.mkdir(parents=True)
+    assert research_sources.decide(on, project) == [] and (on / "_board_snapshot.json").exists()
+    assert research_sources.decide(off, project) == ["board"] and (off / "_no_board").exists()

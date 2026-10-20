@@ -132,7 +132,9 @@ def decide(article_dir, project) -> list[str]:
     except (OSError, ValueError):
         run = {}
     run = run if isinstance(run, dict) else {}
-    topic = str(run.get("topic") or (run.get("brief") or {}).get("title") or "")
+    # the topic as a review rebuilds it (qa_changes.seed_state): the run's, else the brief's title,
+    # else the article's folder name (an imported article may carry no run record)
+    topic = str(run.get("topic") or (run.get("brief") or {}).get("title") or Path(article_dir).name)
     keyword = str((run.get("keyword_research") or {}).get("primary_keyword") or "")
     return gate_all(article_dir, topic, keyword, project)
 

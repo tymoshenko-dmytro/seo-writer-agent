@@ -129,6 +129,11 @@ Audience: {{audience}}
    - **Content types.** Where the brief specified content for a section (a comparison table
      with named columns, a screenshot per reviewed product, a pricing chart), check it is
      actually there and fully populated. A missing comparison table in a roundup = Major.
+   - **Our product near the top.** In a roundup or comparison of products of a kind we make,
+     our entry is the first or the second (the measured structure report gives its place); a
+     later place is a **Major** unless the article honestly ranks by a measure another product
+     leads on, and then the second place is the fix. Where one of our products answers the
+     article's question and the first section neither names nor links it, that is a **Minor**.
 6. **Links.**
    - **A link to a competitor's selling surface = Major, one per link.** The measured
      structure report lists them: their product, pricing, solutions, integration or

@@ -1252,8 +1252,10 @@ def _save(w: Work) -> None:
 
 
 def apply_proposals(slug: str, ids: list[str], version: str, review: str, config=None, project=None) -> dict:
-    """Apply the proposals the person ticked on the page that showed `version` under `review`:
-    each in a group of its own. A tick from another review or another version changes nothing."""
+    """Make the changes the person ticked on the page that showed `version` under `review`: the
+    proposals, and the safe changes the machine tried and can try again (testers, 2026-10-20:
+    every item the machine can make has a tick); each in a group of its own. A tick from another
+    review or another version changes nothing."""
     with _session(slug, "proposals", ",".join(ids), config, project) as (art, cfg, proj):
         run, rv = records(art)
         check_version(art, version)
@@ -1264,24 +1266,31 @@ def apply_proposals(slug: str, ids: list[str], version: str, review: str, config
             raise Stale("a proposal is not one of this review's: look at the page again")
         w = Work(art, run, rv, cfg, proj)
         text, cover = w.text(), art.cover()
-        landed, missed = [], {}
+        landed, missed, done = [], {}, {}
         for f in picked:
-            if f.get("status") != "open" or qm.route(f, text, cover)[0] != "proposal":
-                missed[f["id"]] = "not an open proposal"
+            route = qm.route(f, text, cover)[0] if f.get("status") == "open" else None
+            if route not in ("proposal", "machine"):
+                missed[f["id"]] = "not an open change the machine makes"
                 continue
             if f.get("choices"):
                 missed[f["id"]] = "the reads named different changes for this picture: pick one on its card"
                 continue
-            g, why = attempt(w, f, chosen=True)
+            if route == "machine" and (found := _already_there(w, f)):
+                # as Try again does: what the text already does is closed, not made again
+                _close_done(f, found)
+                done[f["id"]] = found
+                _save(w)
+                continue
+            g, why = attempt(w, f, chosen=route == "proposal")
             if why:
                 missed[f["id"]] = why
             else:
                 landed.append(f["id"])
-                g.close(kind="proposal")
+                g.close(kind="proposal" if route == "proposal" else "fix")
             _save(w)
         check_groups(w, w.made)
         _save(w)
-        return _report(w, landed, missed)
+        return _report(w, landed, missed, done or None)
 
 
 def fix_again(slug: str, fid: str, version: str, config=None, project=None) -> dict:

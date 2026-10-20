@@ -63,10 +63,12 @@ def review_view(art: store.Article) -> dict:
     from .qa_changes import how_it_reverts
 
     texts = {f["id"]: f.get("text") for f in rv.get("findings") or []}
+    sevs = {f["id"]: f.get("severity") for f in rv.get("findings") or []}
     changed = []
     for g in groups:
         how = how_it_reverts(art, rv, g, now)
         changed.append({"id": g["id"], "findings": g.get("findings"), "texts": [texts.get(x) for x in g.get("findings") or []],
+                        "severity": qm.worst(sevs.get(x) for x in g.get("findings") or []),
                         "where": g.get("where"), "before": g.get("before"),
                         "after": g.get("after"), "check": g.get("check"), "check_note": g.get("check_note"),
                         "check_said": plain_check(g.get("check_note"), g.get("check_failed") is True),

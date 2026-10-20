@@ -32,12 +32,20 @@ about the one picture named in FILE, never about other pictures or files.
 - **The cover.** The headline is cut off, overlaps the logo, or is hard to read on the photo;
   the photo has distorted people or hands, or stray letters and fake text. **Major** when the
   headline cannot be read, **Minor** for the rest.
+- **Only text.** An infographic or a card picture that is sentences or a list in boxes, with
+  nothing a reader takes in at a glance (no numbers drawn, no steps or arrows, no diagram): its
+  words belong in the article, where a reader and a search engine read them. **Major**,
+  defect `text_only`, action `remove`.
+- **An advert of our own site.** A screenshot of {{own_domain}} that shows a marketing section
+  (a hero headline, a call-to-action or sign-up banner, a carousel cut midway) instead of the
+  product itself (its interface, a pricing table, a feature screen). **Major**, defect
+  `marketing`, action `remove` (the person can make it again as a drawn picture).
 - **Small things a careful editor would still fix.** A cropped edge, a stray UI element, low
   contrast that still reads. **Minor.**
 
 Do not report taste (colours, layout choices, a style you would prefer), and do not ask for a
 different kind of picture than the one there. A screenshot of {{own_domain}} is fine when it
-shows what the caption says. A picture that does its job gets no problems at all.
+shows the product or the page detail the caption names (not a marketing section, above). A picture that does its job gets no problems at all.
 
 ## The fix
 
@@ -67,7 +75,7 @@ A person reads every `problem` and `what` without the article open, so write the
 ## Output — JSON only
 {"ok": true|false,
  "problems": [{"severity": "Critical|Major|Minor",
-               "defect": "broken|off_caption|unreadable|too_long|covered|contradicts|cover_text|cover_photo|flaw",
+               "defect": "broken|off_caption|unreadable|too_long|covered|contradicts|cover_text|cover_photo|text_only|marketing|flaw",
                "problem": "what the reader sees, one sentence",
                "action": "redraw|recapture|recompose|remove",
                "what": "what the new picture must show"}]}

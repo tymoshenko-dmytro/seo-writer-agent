@@ -35,7 +35,7 @@ MAX_PICTURES = 24
 COLUMN_PX, SCREEN_PX = 720, 800      # the blog's text column and one laptop screen of it
 SEVERITIES = ("Critical", "Major", "Minor")
 DEFECTS = ("broken", "off_caption", "unreadable", "too_long", "covered", "contradicts",
-           "cover_text", "cover_photo", "flaw")
+           "cover_text", "cover_photo", "text_only", "marketing", "flaw")
 # what each kind of picture can be asked for: a cover is recomposed, never removed (every article
 # has one); a screenshot is captured again, a drawn picture redrawn
 ACTIONS = {"cover": ("recompose",), "screenshot": ("recapture", "remove")}

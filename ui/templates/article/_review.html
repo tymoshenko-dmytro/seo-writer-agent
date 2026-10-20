@@ -30,7 +30,7 @@
     <div>
       <div class="review-count">{% if rv.review.valid is sameas false %}No result{% elif needs %}{{ needs|length }} need{{ "s" if needs|length == 1 }} you{% else %}Nothing needs you{% endif %}</div>
       {% set made_v = made|map(attribute="v")|select|list %}
-      <div class="hint">The review {{ rv.review.id }} ({{ rail.review.time.split(", ", 1)[1] if ", " in rail.review.time else rail.review.time }}){% if rv.review.version_n %} read v{{ rv.review.version_n }} and{% endif %} made {{ made|length + half|length }} change{{ "s" if made|length + half|length != 1 }} by itself{% if made %}, one version each{% if made_v %} ({{ "v" ~ made_v|min if made_v|length == 1 else "v" ~ made_v|min ~ "–v" ~ made_v|max }}){% endif %}{% endif %}.{% if needs %} {{ needs|length }} thing{{ "s" if needs|length != 1 }} wait for your choice, in the article's order.{% endif %}</div>
+      <div class="hint">The review {{ rv.review.id }} ({{ rail.review.time.split(", ", 1)[1] if ", " in rail.review.time else rail.review.time }}){% if rv.review.version_n %} read v{{ rv.review.version_n }} and{% endif %} made {{ made|length + half|length }} change{{ "s" if made|length + half|length != 1 }} by itself{% if made %}, one version each{% if made_v %} ({{ "v" ~ made_v|min if made_v|length == 1 else "v" ~ made_v|min ~ "–v" ~ made_v|max }}){% endif %}{% endif %}.{% if needs %} {{ needs|length }} thing{{ "s" if needs|length != 1 }} wait for your choice, the most important first.{% endif %}</div>
     </div>
     {% if needs %}<a class="text-action" href="?tab=article&amp;marks=1">Show them in the article</a>{% endif %}
   </div>
@@ -53,13 +53,13 @@
   {% endfor %}
   {% endif %}
 
-  {% set proposals = needs|selectattr("type", "equalto", "proposal")|list %}
+  {% set tickable = needs|selectattr("tickable")|list %}
   <h2 class="group-title">Needs you <span class="muted">{{ needs|length }}</span></h2>
-  {% if proposals|length > 1 and version %}
+  {% if tickable|length > 1 and version %}
   <form id="batch" method="post" action="{{ base }}/apply" class="batch-bar">
     <input type="hidden" name="version" value="{{ version }}"><input type="hidden" name="review" value="{{ rv.review.id }}">
-    <label class="check"><input type="checkbox" data-select-all> All the proposals</label>
-    {{ ui.button("Apply the ticked proposals", "secondary", size="sm", attrs={"id": "apply-ticked", "data-cost": (costs.proposals or "")}) }}<span class="btn-reason" id="apply-nokey" hidden></span>
+    <label class="check"><input type="checkbox" data-select-all> All</label>
+    {{ ui.button("Make the ticked changes", "secondary", size="sm", attrs={"id": "apply-ticked", "data-cost": (costs.proposals or "")}) }}<span class="btn-reason" id="apply-nokey" hidden></span>
     <span class="hint">or one by one below</span>
   </form>
   {% endif %}
@@ -70,7 +70,7 @@
   <article class="ritem" id="item-{{ it.n }}">
     <span class="anchor" id="f-{{ it.id }}"></span>
     <header class="ritem-head">
-      {% if it.type == "proposal" and not it.choices and proposals|length > 1 and version %}<input type="checkbox" form="batch" name="ids" value="{{ it.id }}" data-paid="{{ 1 if it.cost else 0 }}"{% if it.needs and not keys[it.needs] %} data-nokey="{{ keys[it.needs ~ '_reason'] }}"{% endif %} aria-label="Tick to apply with the others">{% endif %}
+      {% if it.tickable and tickable|length > 1 and version %}<input type="checkbox" form="batch" name="ids" value="{{ it.id }}" data-paid="{{ 1 if it.cost else 0 }}" data-cost="{{ it.cost or '' }}"{% if it.needs and not keys[it.needs] %} data-nokey="{{ keys[it.needs ~ '_reason'] }}"{% endif %} aria-label="Tick to make it with the others">{% endif %}
       <span class="ritem-n">{{ it.n }}</span>
       <span class="ritem-place">{{ it.section }}</span>
       <span class="ritem-meta">{{ ui.severity(it.severity) }}{% if it.kind %}<span>{{ it.kind }}</span>{% endif %}</span>

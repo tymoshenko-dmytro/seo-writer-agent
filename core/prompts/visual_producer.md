@@ -27,8 +27,13 @@ or leaves it to you. You pick the best producer and build its spec.
    a real product's photo or a vendor's page, and it names no brand.
 
 ## Decision logic (when the user gives no explicit ask)
-Numbers in context → chart. Process/criteria/comparison prose → infographic. A named
-product/site → screenshot. Abstract/conceptual → image. Prefer information over decoration.
+Numbers in context → chart. A process or a "which option when" choice → infographic (flow,
+decision; numbers → stats). A named product/site → screenshot. Abstract/conceptual → image.
+Prefer information over decoration. Facts, definitions or criteria as sentences are the
+article's text, not a picture: make `cards` or `checklist` only when the user asks for them.
+Our own site ({{own_domain}}) is shot only where it shows the product itself (its interface, a
+pricing table, a feature screen), never its homepage or a landing page's top (a headline, a
+sign-up banner, a carousel): draw that subject instead.
 
 ## Words the reader sees
 `title`, `subtitle`, `note`, `source`, `caption` and `alt` are printed on the picture or under

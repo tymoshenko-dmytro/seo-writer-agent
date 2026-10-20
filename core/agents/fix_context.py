@@ -95,7 +95,8 @@ def context_block(project, state, target) -> str:
                             allowed_urls=[t.url for t in idx.targets] if idx else None,
                             competitor_hosts=links.get("competitor_hosts") or (),
                             competitor_doc_paths=links.get("competitor_doc_paths") or (),
-                            article_dir=getattr(state, "output_dir", "") or None)
+                            article_dir=getattr(state, "output_dir", "") or None,
+                            own_names=(project.name,))
     return f"""CONTEXT — the article is being polished, not rebuilt.
 
 MEASURED STRUCTURE (do not make any of these worse):

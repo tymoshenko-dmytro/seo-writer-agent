@@ -307,7 +307,8 @@ def _shows_page(article_dir, asset: str, url: str) -> bool:
 def analyze_structure(markdown: str, target_words: int = 0, allowed_urls=None,
                       internal_hosts=None, words_per_link: int | None = None,
                       sources_available: int = 0, words_per_citation: int = 250,
-                      competitor_hosts=(), competitor_doc_paths=(), article_dir=None) -> dict:
+                      competitor_hosts=(), competitor_doc_paths=(), article_dir=None,
+                      own_names=()) -> dict:
     """Measure everything the SEO rules are stated in terms of. Pure counting, no judgement.
     `internal_hosts` defaults to the project's own domains (core/brand.py); `article_dir` is where
     the pictures are, so a picture's kind is read from its sidecar (else from its file's name)."""
@@ -335,11 +336,13 @@ def analyze_structure(markdown: str, target_words: int = 0, allowed_urls=None,
     # also asking to cut 20 to get under the length ceiling — unsatisfiable, and the fix loop
     # oscillated 74 -> 79 -> 76 without converging.
     roundup_h3 = set()
+    roundups: list[tuple[str, list[int]]] = []
     cur_h2, kids = None, []
     for i, sec in enumerate(sections + [{"level": 2, "title": "", "words": 0}]):
         if sec["level"] == 2:
             if cur_h2 and _ROUNDUP.search(cur_h2) and len(kids) >= 3:
                 roundup_h3.update(kids)
+                roundups.append((cur_h2, list(kids)))
             cur_h2, kids = sec["title"], []
         elif sec["level"] == 3 and cur_h2:
             kids.append(i)
@@ -391,6 +394,16 @@ def analyze_structure(markdown: str, target_words: int = 0, allowed_urls=None,
     invented = ([u for _, u in internal if _url_key(u) not in allowed and _url_key(u) not in shot_pages
                  and not brand.is_app_page(u)] if allowed else [])
 
+    # where our own product's entry stands in each roundup: the first or the second is the rule
+    # (testers, 2026-10-20: "our product should be first or second")
+    names = [n.strip().lower() for n in own_names if n and n.strip()]
+    own_places = []
+    for h2, idxs in roundups if names else ():
+        place = next((k for k, i in enumerate(idxs, 1)
+                      if any(re.search(r"(?<!\w)" + re.escape(n) + r"(?!\w)", sections[i]["title"].lower())
+                             for n in names)), None)
+        own_places.append({"section": h2, "place": place, "of": len(idxs)})
+
     total = _words(body)
     want_internal = max(3, round((target_words or total) / max(words_per_link, 1)))
     return {
@@ -402,6 +415,7 @@ def analyze_structure(markdown: str, target_words: int = 0, allowed_urls=None,
         "h2_with_h3": h2_with_h3,
         "thin_h3": thin_h3,
         "roundup_h3": len(roundup_h3),
+        "own_places": own_places,
         "question_headings": question_h3,
         "long_sections": long_sections,
         "h2_without_intro": h2_no_intro,
@@ -435,6 +449,12 @@ def format_structure_report(r: dict) -> str:
         extra = len(items) - n
         return "; ".join(items[:n]) + (f" (+{extra} more)" if extra > 0 else "")
 
+    for o in r.get("own_places") or []:
+        if o["place"] is None:
+            L.append(f"- OUR ENTRY: not among the {o['of']} entries of the roundup '{o['section']}'.")
+        else:
+            L.append(f"- OUR ENTRY: #{o['place']} of {o['of']} in the roundup '{o['section']}'"
+                     + (" — the first or the second place is the rule" if o["place"] > 2 else "") + ".")
     if r.get("roundup_h3"):
         L.append(f"- {r['roundup_h3']} H3(s) are per-product entries in a roundup section — one "
                  f"per reviewed product is correct, and a short entry is normal there because "

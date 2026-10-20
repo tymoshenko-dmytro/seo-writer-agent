@@ -121,21 +121,21 @@ def _subject(section: str, url: str) -> tuple[str, str]:
     return name or host, host
 
 
-def _clip(text, n: int) -> str:
-    """At most n characters, cut at a word boundary with an ellipsis - never mid-word."""
-    t = " ".join(str(text or "").split())
-    if len(t) <= n:
-        return t
-    cut = t[:n - 1]
-    if t[n - 1] != " " and " " in cut:
-        cut = cut[:cut.rfind(" ")]
-    return cut.rstrip(" ,;:—–-") + "…"
+_TITLE_SITE = re.compile(r"\s+(?:[|·•]|[-–—]|::)\s+")
 
 
-# a value that only states an absence ("Not publicly confirmed") is not a key fact about a product;
-# this also drops a sourced absence from the vendor's own page ("No free tier") - an acceptable loss
-# for a fallback image
-_ABSENT = re.compile(r"^\s*(?:no|not|none|unknown|n/a|unclear|undisclosed|unconfirmed)(?![\w-])", re.I)
+def _page_title(text) -> str:
+    """A page's title as a caption: the page's own name, its site's name after " - " or " | "
+    dropped ("What is the Difference Between Translation and Interpreting?"), never cut with "…"
+    (testers, 2026-10-20: "…American Translators…" under a picture). A very long title is cut at
+    its last word within 160 characters, without an ellipsis."""
+    t = " ".join(re.sub(r"[\[\]*<>`]+", " ", str(text or "")).split())
+    parts = _TITLE_SITE.split(t)
+    if len(parts) > 1 and len(parts[0].split()) >= 2:
+        t = parts[0]
+    if len(t) > 160:
+        t = t[:160].rsplit(" ", 1)[0].rstrip(" ,;:—–-")
+    return t
 
 
 # --- checking a capture that did succeed (S3) ------------------------------------------------------
@@ -463,7 +463,7 @@ class VisualDirector(BaseAgent):
                             # a different page than the one the writer described: say what is in
                             # the image (the page's own title) and keep the writer's words on record
                             name, host = _subject(section, used)
-                            title = _clip(re.sub(r"[\[\]*<>`]+", " ", diag.get("title") or ""), 90)
+                            title = _page_title(diag.get("title"))
                             if title:
                                 shown = title if name.lower() in title.lower() else f"{name}: {title}"
                             else:
@@ -488,18 +488,13 @@ class VisualDirector(BaseAgent):
                                                 "detail": first.get("detail")}
                             state.note(f"[visuals] screenshot for '{section}' via {fallback}: {used}")
                     else:
-                        card = self._fact_card(state, url, section, assets)
-                        if card:
-                            repl, entry = card
-                            entry["refused"] = {"url": url, "reason": first.get("reason"),
-                                                "detail": first.get("detail")}
-                            state.note(f"[visuals] screenshot refused for '{section}' ({url}, "
-                                       f"{first.get('reason')}) — replaced by a fact card")
-                        else:
-                            entry["reason"] = first.get("reason") or "ERROR"
-                            entry["detail"] = first.get("detail") or ""
-                            state.note(f"[visuals] screenshot refused for '{section}': {url} — "
-                                       f"{entry['reason']} ({entry['detail']})")
+                        # no picture of the vendor's facts in text cards: the facts are the
+                        # article's text, and a picture of text has no value of its own (testers,
+                        # 2026-10-20: "tables as a picture are odd")
+                        entry["reason"] = first.get("reason") or "ERROR"
+                        entry["detail"] = first.get("detail") or ""
+                        state.note(f"[visuals] screenshot refused for '{section}': {url} — "
+                                   f"{entry['reason']} ({entry['detail']})")
                 md = md.replace(m.group(0), repl, 1)
                 manifest.append(entry)
             state.draft_markdown = md
@@ -588,6 +583,7 @@ class VisualDirector(BaseAgent):
             f"- {s.get('stat')}: {s.get('value','')}" for s in (r.get("key_statistics") or [])[:20]
         ) or "(none)"
 
+        own = self.project.brand.domain if self.project.brand and self.project.brand.domain else "our site"
         prompt = f"""ARTICLE TOPIC: {state.topic}
 
 The article below under-uses visuals. Propose UP TO {budget} additional visuals that add
@@ -610,7 +606,10 @@ even with slightly different categories):
 
 Rules:
 - screenshot: ONLY for a product/service/vendor actually discussed under that heading;
-  url = its official homepage or product page. One per vendor, no duplicates.
+  url = its official homepage or product page. One per vendor, no duplicates. A page of our
+  own site ({own}) only when it shows the product itself (its interface, a pricing table, a
+  feature screen): never our homepage or a landing page's top (a headline, a sign-up banner,
+  a carousel), which read as an advert, not a picture.
 - chart: only if the statistics above give >=3 real numbers or a clear comparison.
   Every value in ONE chart must share the SAME unit and the SAME period — never mix
   $/day with $/month, or ms with seconds. If units differ, skip the chart.
@@ -618,22 +617,22 @@ Rules:
   belong in a list or table, not a chart.
 - Skip anything that would be decorative. Fewer good visuals beat the budget.
 
-- infographic: the HIGHEST-value option — a branded explainer graphic. Five templates:
+- infographic: a branded explainer graphic that shows a STRUCTURE the reader takes in at a
+  glance. Three templates:
   * flow — a process/pipeline the article explains step by step (3-6 steps)
   * decision — a "which option when" guide the article makes in prose/tables (3-5 branches)
-  * cards — a taxonomy/category breakdown the article defines (3-6 items)
-  * checklist — a numbered list of questions/criteria the article gives (4-8 items)
   * stats — 2-4 headline numbers FROM THE KEY STATISTICS above (values verbatim)
+  Never a picture of sentences: facts, definitions, a list of criteria or a taxonomy stay in
+  the article as text or a table (a reader and a search engine both read them there).
   Content MUST be distilled from the article's own text (or the statistics above) — never
-  invented. Labels <=6 words, descriptions <=12 words. Prefer 1-3 strong infographics that
-  each summarize a major section.
+  invented. Labels <=6 words, descriptions <=12 words. At most 1-2, each for a major section.
 
 Return ONLY JSON:
 {{"insertions": [
   {{"type": "screenshot", "vendor": "vendor name EXACTLY as written in the article prose", "url": "https://...", "caption": "..."}},
   {{"type": "chart", "after_heading": "exact heading text from the list", "data": "label: value, label: value, ...", "caption": "..."}},
-  {{"type": "infographic", "after_heading": "exact heading text from the list", "spec": {{"type": "flow|decision|cards|checklist|stats", "title": "...", "subtitle": "optional", "source": "optional attribution",
-     "steps": [{{"label": "...", "desc": "..."}}], "branches": [{{"if": "...", "then": "...", "detail": "..."}}], "items": ["... or {{title,desc}} or {{value,label}}"]}}}}
+  {{"type": "infographic", "after_heading": "exact heading text from the list", "spec": {{"type": "flow|decision|stats", "title": "...", "subtitle": "optional", "source": "optional attribution",
+     "steps": [{{"label": "...", "desc": "..."}}], "branches": [{{"if": "...", "then": "...", "detail": "..."}}], "items": [{{"value": "...", "label": "..."}}]}}}}
 ]}}
 For screenshots the placement anchor is the vendor's first substantive mention in prose —
 so only propose vendors the article actually discusses in sentences (not just table rows)."""
@@ -706,9 +705,12 @@ so only propose vendors the article actually discusses in sentences (not just ta
             elif typ == "infographic":
                 head = (item.get("after_heading") or "").strip()
                 spec = item.get("spec") or {}
-                if not head or spec.get("type") not in ("flow", "decision", "cards", "checklist", "stats"):
-                    dropped.append(f"infographic '{head or '?'}': missing heading or unknown "
-                                   f"template {spec.get('type')!r}")
+                # a picture of sentences (cards, a checklist) is the article's text, not a picture
+                # (testers, 2026-10-20): only a flow, a decision or numbers are proposed here; a
+                # person may still ask for the others in the Studio
+                if not head or spec.get("type") not in ("flow", "decision", "stats"):
+                    dropped.append(f"infographic '{head or '?'}': missing heading, or a template that is "
+                                   f"text in boxes ({spec.get('type')!r})")
                     continue
                 resolved = resolve_heading(md, head)
                 if not resolved:
@@ -794,40 +796,6 @@ so only propose vendors the article actually discusses in sentences (not just ta
         """The look at a shot (ShotLook, the visuals' model): (label, why, heading to frame on)."""
         got = ShotLook(self.project, self.config).look(png, caption, outline)
         return got["label"], got["why"], got["heading"]
-
-    def _fact_card(self, state, url: str, section: str, assets: Path):
-        """A branded card of the vendor's own researched facts, when its page cannot be shot.
-
-        Only facts whose source is on the vendor's own domain, verbatim; at least two of them, or
-        no card. The caption says what the image is - facts - and never claims a screenshot.
-        Returns (markdown, manifest entry) or None.
-        """
-        dom = _registrable(urlparse(url).hostname or "")
-        facts = [f for f in self.citable_facts(state.research)[0]
-                 if f.get("source_url") and _registrable(urlparse(f["source_url"]).hostname or "") == dom
-                 and not _ABSENT.match(str(f.get("value") or ""))]
-        if len(facts) < 2:
-            return None
-        # the value is the headline ("$8.74 per user per month"), the claim the sentence under it
-        items = [{"title": _clip(f.get("value"), 60), "desc": _clip(f.get("claim"), 160)}
-                 if f.get("value") else {"title": _clip(f.get("claim"), 60), "desc": ""}
-                 for f in facts[:6]]
-        name, host = _subject(section, url)
-        spec = {"type": "cards", "title": f"{name}: key facts", "items": items,
-                "source": ", ".join(sorted({urlparse(f["source_url"]).hostname for f in facts[:6]}))}
-        n = next_free(assets, "infographic")
-        png = assets / f"infographic_{n}.png"
-        logo = self.project.brand.logo_file()   # None: the project has no logo
-        if not infographic.render(spec, str(png), logo_png=str(logo) if logo else None,
-                                   palette=self.project.brand.palette):
-            return None
-        atomic_write_text(png.with_suffix(".json"), json.dumps(
-            {"producer": "infographic", "spec": spec, "fallback_for": url}, ensure_ascii=False, indent=2))
-        caption = (f"Key facts about {name} from its own pages ({host})" if name != host
-                   else f"Key facts about {host} from its own pages")
-        md = f"![{caption}](assets/infographic_{n}.png)\n*{caption}*"
-        return md, {"type": "infographic", "status": "generated", "path": f"assets/infographic_{n}.png",
-                    "caption": caption, "url": url, "section": section, "fallback": "fact_card"}
 
     def _chart_specs(self, state, chart_markers) -> dict:
         # the shared corpus view: a chart puts numbers straight into the article, so it draws on

@@ -336,6 +336,9 @@ def review_queue(art: store.Article, body: str, rv: dict, costs: dict) -> list[d
                 "why": scrub_errors(it.get("why"))}
         item["will"] = _will(item)
         item["needs"] = _needs_word(it, art.dir)
+        # ticked and made together: a proposal with one change, or what the machine tried and
+        # can try again (testers, 2026-10-20: "sometimes there is no checkbox")
+        item["tickable"] = (item["type"] == "proposal" and not it.get("choices")) or item["type"] == "left"
         item["choices"] = [{**c, "label": _CHOICE_LABEL.get(c.get("action"), "Make it again"),
                             "needs": _needs_word({"action": c.get("action"), "on": it.get("on")}, art.dir),
                             "cost": None if c.get("action") == "remove_picture" else costs.get("visual_edit")}
@@ -364,6 +367,7 @@ def review_queue(art: store.Article, body: str, rv: dict, costs: dict) -> list[d
         at = body.find(first_after.strip()) if isinstance(first_after, str) and first_after.strip() else -1
         half = qm.half_done(g)
         item = {"id": g["id"], "group": "needs" if half else "made", "type": "half" if half else "change",
+                "severity": g.get("severity"),
                 "at": at if at >= 0 else None, "kept_as_is": g.get("kept_as_is"),
                 "kept_by": who((g.get("kept_as_is") or {}).get("who")) if g.get("kept_as_is") else None,
                 "adjusted": g.get("adjusted"),
@@ -414,7 +418,9 @@ def review_queue(art: store.Article, body: str, rv: dict, costs: dict) -> list[d
             how = "Changed by the machine"
         closed.append({**it, "group": "closed", "title": it.get("text") or "", "how": how})
     key = (lambda x: (x["at"] is None, x["at"] or 0))
-    needs.sort(key=key)
+    # what needs the person: the most important first, then the article's order (testers,
+    # 2026-10-20: "Critical issues should come first"); what changed stays in the article's order
+    needs.sort(key=lambda x: (qm.severity_rank(x.get("severity")), *key(x)))
     made.sort(key=key)
     for n, it in enumerate(needs + made, 1):
         it["n"] = n

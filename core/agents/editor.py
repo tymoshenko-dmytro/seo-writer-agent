@@ -434,6 +434,7 @@ class Editor(BaseAgent):
             competitor_hosts=(self.project.links or {}).get("competitor_hosts") or (),
             competitor_doc_paths=(self.project.links or {}).get("competitor_doc_paths") or (),
             article_dir=getattr(state, "output_dir", "") or None,
+            own_names=(self.project.name,),
         )
         state.structure = rep
         return format_structure_report(rep)

@@ -77,6 +77,21 @@ def norm_severity(sev) -> str:
     return s if s in SEVERITIES else "unknown"
 
 
+# the order a person meets them in: the most important first; an unknown one weighs as a major
+# (POINTS), so it sorts with them (testers, 2026-10-20: "Critical issues should come first")
+_RANK = {"critical": 0, "major": 1, "unknown": 1, "minor": 2, "nitpick": 3}
+
+
+def severity_rank(sev) -> int:
+    return _RANK[norm_severity(sev)]
+
+
+def worst(severities) -> str:
+    """The most important of several severities ("unknown" when there are none)."""
+    found = [norm_severity(s) for s in severities if s]
+    return min(found, key=lambda s: (_RANK[s], s != "major")) if found else "unknown"
+
+
 def norm_basis(b) -> str | None:
     """Why a sourcing finding was raised: a claim the research is silent on is UNKNOWN, not false
     (measured: of 56 flagged third-party claims, 21 were true); a claim a listed source

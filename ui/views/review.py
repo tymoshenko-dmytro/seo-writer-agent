@@ -143,10 +143,11 @@ def _said(root, slug: str) -> dict:
 
 @bp.route("/a/<slug>/apply", methods=["POST"])
 def apply_proposals(slug):
-    """The proposals named (one, or the ticked ones), made by the machine (a job)."""
+    """The changes named (one proposal, or the ticked proposals and Try again items), made by the
+    machine (a job)."""
     ids = [i for i in request.form.getlist("ids") if i]
     if not ids:
-        flash("Nothing done: tick a proposal first.")
+        flash("Nothing done: tick a change first.")
         return _back(slug)
     version, review_id = request.form.get("version", ""), request.form.get("review", "")
     root = out()                                    # the job runs outside the request
@@ -156,12 +157,15 @@ def apply_proposals(slug):
         rep = qc.apply_proposals(slug, ids, version, review_id, config=CONFIG, project=project())
         missed = rep.get("not_landed") or {}
         said = _said(root, slug) if missed else {}
-        return {"step": f"{len(rep.get('landed') or [])} made" + (f", {len(missed)} not made: "
-                        + "; ".join(f"{k}: {said.get(k) or 'not made'}" for k in missed) if missed else "")}
+        done = rep.get("already_done") or {}
+        return {"step": f"{len(rep.get('landed') or [])} made"
+                + (f", {len(done)} already done" if done else "")
+                + (f", {len(missed)} not made: " + "; ".join(f"{k}: {said.get(k) or 'not made'}" for k in missed)
+                   if missed else "")}
 
     n = len(ids)
-    return _job(slug, f"Proposals · {slug}", "proposals", run,
-                f"Making the {n} proposal{'s' if n > 1 else ''} in the background.", needs=_needs_of(slug, ids),
+    return _job(slug, f"Changes · {slug}", "proposals", run,
+                f"Making the {n} change{'s' if n > 1 else ''} in the background.", needs=_needs_of(slug, ids),
                 version=version, findings=ids, anchor=request.form.get("anchor") or None)
 
 

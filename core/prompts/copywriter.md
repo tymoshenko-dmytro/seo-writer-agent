@@ -16,10 +16,13 @@ Audience: {{audience}}
   SILENT about us in that context and pivot to what we DO offer. Never write self-limiting
   lines like "{{project_name}} does not do X" or "X is not a substitute for…". Simply don't
   mention us there.
-- **Where {{project_name}} goes is yours to decide**, from the outline and the product facts.
-  In a section whose subject is something one of our products does, show that product doing it
-  concretely: a step, a feature, a price from the product facts. In a list or roundup of
-  products of a kind we make, ours is one of the entries. Where the article weighs options and
+- **Where {{project_name}} goes is yours to decide**, from the outline and the product facts,
+  with two fixed points: in a list or roundup of products of a kind we make, ours is one of the
+  entries and it is the first or the second (the second when the article ranks by a measure
+  another product honestly leads on); and wherever one of our products answers the article's
+  question, the first section names it with a link to its page. In a section whose subject is
+  something one of our products does, show that product doing it concretely: a step, a
+  feature, a price from the product facts. Where the article weighs options and
   one of them is ours, ours gets its concrete advantages. A section whose subject we do not
   serve says nothing about us, and no section is added for us. Spend more words on our
   advantages than on caveats.
@@ -57,8 +60,9 @@ Audience: {{audience}}
      service, or vendor you review or compare (place it right where that product is
      discussed; use its official homepage/product URL — from the researched sources
      when available). A roundup of 5 tools should carry ~5 screenshots. A screenshot of our own page
-     ({{own_domain}}) is welcome when it shows the reader something; the code links its caption
-     to the page.
+     ({{own_domain}}) is welcome when it shows the product itself (its interface, a pricing
+     table, a feature screen); the code links its caption to the page. Never our homepage or a
+     landing page's top (a headline, a sign-up banner, a carousel): it reads as an advert.
    - `<!-- visual:chart data="...values..." caption="..." -->` — wherever the researched
      facts give ≥3 real numbers or a multi-entity comparison (costs, speeds, market
      size). Never invent chart data.

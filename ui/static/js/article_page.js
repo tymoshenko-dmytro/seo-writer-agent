@@ -163,7 +163,8 @@
     if (input.files.length) input.form.submit();
   }));
 
-  // the ticked proposals: counted, with what they cost together
+  // the ticked changes (proposals and what the machine can try again): counted, with what they
+  // cost together, each at its own price
   const batch = $('#batch');
   if (batch) {
     const button = $('#apply-ticked');
@@ -175,7 +176,8 @@
     const acceptPrimary = accept && accept.classList.contains('btn-primary');
     const update = () => {
       const on = picks().filter(p => p.checked);
-      const paid = on.filter(p => p.dataset.paid === '1').length;
+      const price = p => parseFloat((p.dataset.cost || '').replace(/[^0-9.]/g, '')) || each;
+      const total = on.filter(p => p.dataset.paid === '1').reduce((sum, p) => sum + price(p), 0);
       // a ticked proposal whose key the install lacks keeps the batch off, and says which key;
       // a picture's removal is code and needs none
       const nokey = on.map(p => p.dataset.nokey).find(Boolean);
@@ -189,11 +191,11 @@
         accept.classList.toggle('btn-secondary', on.length > 0);
       }
       const label = $('span', button);
-      label.textContent = on.length ? `Apply the ${on.length} ticked proposal${on.length > 1 ? 's' : ''}` : 'Apply the ticked proposals';
+      label.textContent = on.length ? `Make the ${on.length} ticked change${on.length > 1 ? 's' : ''}` : 'Make the ticked changes';
       let cost = $('.btn-cost', button);
-      if (paid && each) {
+      if (total) {
         if (!cost) { cost = document.createElement('span'); cost.className = 'btn-cost'; button.appendChild(cost); }
-        cost.textContent = `· about $${(paid * each).toFixed(2)}`;
+        cost.textContent = `· about $${total.toFixed(2)}`;
       } else if (cost) cost.remove();
       all.checked = on.length > 0 && on.length === picks().length;
     };

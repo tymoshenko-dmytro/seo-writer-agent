@@ -83,6 +83,10 @@ LONG = "A " + "very " * 60 + "long title"
     ("Pricing plans - Annual Versus Monthly", "https://vendor.example/pricing", "Pricing plans - Annual Versus Monthly"),
     ("Example Vendor Pricing - Example Vendor", "https://www.example-vendor.com/pricing", "Example Vendor Pricing"),
     (LONG, None, LONG),                                          # never cut (RA54-01: no silent cut either)
+    # a phrase that only resembles the host is the title's own (R102-01)
+    ("Pricing plans - Annual Cost", "https://acme.example/guide", "Pricing plans - Annual Cost"),
+    ("Acme pricing - Annual Versus Monthly", "https://acme.example/guide", "Acme pricing - Annual Versus Monthly"),
+    ("Pricing - Acme", "https://getacme.com/pricing", "Pricing"),
     # the title's own characters stay: the Studio's caption keeps them, made safe by safe_words
     ("Setup guide [2026] | Acme", None, "Setup guide [2026]"),
 ])

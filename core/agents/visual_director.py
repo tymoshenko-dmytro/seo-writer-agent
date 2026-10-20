@@ -129,17 +129,24 @@ def _subject(section: str, url: str) -> tuple[str, str]:
 _TITLE_SITE = re.compile(r"\s+([|·•]|[-–—]|::)\s+")
 
 
+_SITE_TAILS = ("", "net", "web", "app", "hq", "online", "global", "group", "inc")
+
+
 def _names_site(part: str, host: str) -> bool:
-    """`part` of a page title is the name of the site at `host`: its letters are the host's name
-    ("Example Vendor" at example-vendor.com), or its initials begin it ("American Translators
-    Association" at atanet.org)."""
-    label = re.sub(r"[^a-z0-9]", "", _registrable(host).split(".")[0]) if host else ""
+    """`part` of a page title is the name of the site at `host`, by the host's own name: its letters
+    are the name ("Example Vendor" at example-vendor.com), the name begins or ends with them
+    ("Acme" at getacme.com), or its initials are the name ("American Translators Association" at
+    atanet.org). A phrase that only contains the name ("Acme pricing") or shares its first letters
+    ("Annual Cost" at acme.example) does not name the site (Codex R102-01)."""
+    reg = _registrable(host) if host else ""
+    label = re.sub(r"[^a-z0-9]", "", reg.split(".")[0])
     words = re.findall(r"[a-z0-9]+", part.lower())
     if not label or not words or len(words) > 5:
         return False
     joined, initials = "".join(words), "".join(w[0] for w in words)
-    return ((len(joined) >= 3 and joined in label) or (len(label) >= 3 and label in joined)
-            or (len(initials) >= 2 and label.startswith(initials)))
+    return (joined in (label, re.sub(r"[^a-z0-9]", "", reg))
+            or (len(joined) >= 4 and (label.startswith(joined) or label.endswith(joined)))
+            or (len(words) >= 2 and label.startswith(initials) and label[len(initials):] in _SITE_TAILS))
 
 
 def page_title(text, url: str | None = None) -> str:

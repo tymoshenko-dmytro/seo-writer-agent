@@ -24,7 +24,12 @@ BASE_ACRONYMS = ("ai", "api", "faq", "vs", "seo", "saas", "b2b", "b2c")
 
 
 def _host(url: str | None) -> str:
-    h = urlparse(url or "").netloc.lower()
+    """The URL's host name: no port ("https://acme.example:443/" is still acme.example, Codex
+    R102-02), no user, lower case, no "www."."""
+    try:
+        h = (urlparse(url or "").hostname or "").lower()
+    except ValueError:          # a malformed port or bracket: no host to compare
+        return ""
     return h[4:] if h.startswith("www.") else h
 
 

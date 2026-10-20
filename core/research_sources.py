@@ -72,7 +72,12 @@ def sources(project) -> list[ModuleType]:
 def _load(p: Path) -> ModuleType | None:
     """One source, from its file's current text: compiled here, so a bytecode cache that matches
     an older text by its time and size is never run instead."""
-    name = f"research_source_{p.stem}"
+    # one name per project folder and file: two projects' sources of the same file name in one
+    # process never take each other's place in sys.modules
+    import hashlib
+
+    folder = hashlib.sha1(str(p.parent.resolve()).encode("utf-8")).hexdigest()[:10]
+    name = f"research_source_{folder}_{p.stem}"
     mod = ModuleType(name)
     mod.__file__ = str(p)
     # registered before it runs, as an import is: a dataclass (or anything else that looks its
@@ -91,7 +96,7 @@ def _load(p: Path) -> ModuleType | None:
 
 
 def name_of(src: ModuleType) -> str:
-    return str(getattr(src, "NAME", "") or src.__name__.removeprefix("research_source_"))
+    return str(getattr(src, "NAME", "") or Path(getattr(src, "__file__", "") or src.__name__).stem)
 
 
 def gate_all(article_dir, topic: str, keyword: str, project) -> list[str]:

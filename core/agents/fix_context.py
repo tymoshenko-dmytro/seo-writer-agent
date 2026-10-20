@@ -61,6 +61,11 @@ def sanctioned_names(project, state) -> str:
         if isinstance(s, dict):
             exempt.append(str(s.get("title") or ""))
     exempt.append(project.product_facts or "")
+    # what the project's own research sources give this article: the editor read its names, and
+    # an edit citing it may use them (core/research_sources.py)
+    from ..research_sources import corpus_blocks
+
+    exempt.append(corpus_blocks(getattr(state, "output_dir", None), project))
     return "\n".join(exempt)
 
 
@@ -81,6 +86,11 @@ def context_block(project, state, target) -> str:
         for fact in (f.get("facts") or []):
             if fact.get("source_url"):
                 srcs.add(fact["source_url"])
+    # and what the project's own research sources cite for this article: the fixer is given the
+    # source the review asked it to cite (core/research_sources.py)
+    from ..research_sources import cited_urls
+
+    srcs |= cited_urls(getattr(state, "output_dir", None), project)
     rep = analyze_structure(state.draft_markdown, target_words=target, sources_available=len(srcs),
                             allowed_urls=[t.url for t in idx.targets] if idx else None,
                             competitor_hosts=links.get("competitor_hosts") or (),

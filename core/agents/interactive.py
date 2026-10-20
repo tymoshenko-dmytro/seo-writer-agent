@@ -380,12 +380,17 @@ class VisualProducerService(BaseAgent):
             return None, str(raw or "")
         return data, str(raw or "")
 
-    def _pages_block(self, url: str | None) -> str:
+    def _pages_block(self, url: str | None, d: Path | None = None) -> str:
         """What a re-capture reads before it names a section: the current page's headings, each
         with the start of its text, and the project's own pages. It guessed a focus phrase without
-        seeing the page, and three re-captures in a row came back as the page's header (2026-10-06)."""
+        seeing the page, and three re-captures in a row came back as the page's header (2026-10-06).
+        A page the article's research sources leave out is neither read nor offered (`d`, the
+        article's folder)."""
+        def left_out(u):
+            return d is not None and research_sources.leaves_out(d, u, self.project)
+
         L = []
-        if url and url.startswith("http"):
+        if url and url.startswith("http") and not left_out(url):
             heads = screenshot.outline(url)
             if heads:
                 L.append(f"PAGE OUTLINE of {url} (its headings, each with the start of the text under it):")
@@ -396,7 +401,8 @@ class VisualProducerService(BaseAgent):
             from ..tools.link_index import LinkIndex
 
             idx = LinkIndex.load(self.project.root)
-            own = [t for t in (idx.targets if idx else []) if getattr(t, "kind", "page") != "post"][:40]
+            own = [t for t in (idx.targets if idx else [])
+                   if getattr(t, "kind", "page") != "post" and not left_out(t.url)][:40]
         except Exception:  # noqa: BLE001 — the pages are a hint
             own = []
         if own:
@@ -424,7 +430,7 @@ AFTER:
 USER REQUEST: {instruction or "(none — decide yourself what best serves this spot)"}
 
 {self._facts_block(d)}
-{self._pages_block(None)}
+{self._pages_block(None, d)}
 
 Pick the producer, build the spec per your instructions. Return ONLY the JSON."""
         data, _ = self._producer_json(user)
@@ -538,7 +544,7 @@ Pick the producer, build the spec per your instructions. Return ONLY the JSON.""
             ask = f"The user wants to CHANGE an existing {KIND_WORDS[kind]} in the article."
         shot = ""
         if kind == "screenshot" or want == "auto":
-            shot = self._pages_block(str(((old_spec or {}).get("spec") or {}).get("url") or "")) + f"""
+            shot = self._pages_block(str(((old_spec or {}).get("spec") or {}).get("url") or ""), d) + f"""
 
 {"If you choose a screenshot" if want == "auto" else "For this screenshot"}, read the outline: `heading` is the exact heading of the section that shows
 what is asked (copied from an outline); `focus` the words that section shows. If this page has no

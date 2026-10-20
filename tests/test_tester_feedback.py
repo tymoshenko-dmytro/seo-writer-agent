@@ -83,6 +83,8 @@ LONG = "A " + "very " * 60 + "long title"
     ("Pricing plans - Annual Versus Monthly", "https://vendor.example/pricing", "Pricing plans - Annual Versus Monthly"),
     ("Example Vendor Pricing - Example Vendor", "https://www.example-vendor.com/pricing", "Example Vendor Pricing"),
     (LONG, None, LONG),                                          # never cut (RA54-01: no silent cut either)
+    # the title's own characters stay: the Studio's caption keeps them, made safe by safe_words
+    ("Setup guide [2026] | Acme", None, "Setup guide [2026]"),
 ])
 def test_a_page_title_caption_is_never_cut_with_an_ellipsis(title, url, shown):
     from core.agents.visual_director import page_title

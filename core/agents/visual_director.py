@@ -147,8 +147,9 @@ def page_title(text, url: str | None = None) -> str:
     and never ended with "…" (testers, 2026-10-20: "…American Translators…" under a picture). The
     site's name is the part at either end that names the page's own host (`url`), or the short
     part after a last " | " (" · ", " :: "). After a dash, words that do not name the host are the
-    title's own ("Pricing plans - Annual Versus Monthly" stays whole: Codex RA54-01, RA5D-01)."""
-    t = " ".join(re.sub(r"[\[\]*<>`]+", " ", str(text or "")).split())
+    title's own ("Pricing plans - Annual Versus Monthly" stays whole: Codex RA54-01, RA5D-01).
+    Its characters are kept: a caller that writes it into Markdown makes it safe its own way."""
+    t = " ".join(str(text or "").split())
     seps = list(_TITLE_SITE.finditer(t))
     if not seps:
         return t
@@ -499,7 +500,7 @@ class VisualDirector(BaseAgent):
                             # a different page than the one the writer described: say what is in
                             # the image (the page's own title) and keep the writer's words on record
                             name, host = _subject(section, used)
-                            title = page_title(diag.get("title"), used)
+                            title = " ".join(re.sub(r"[\[\]*<>`]+", " ", page_title(diag.get("title"), used)).split())
                             if title:
                                 shown = title if name.lower() in title.lower() else f"{name}: {title}"
                             else:

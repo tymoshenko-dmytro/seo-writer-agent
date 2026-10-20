@@ -38,13 +38,25 @@ def _new_secret(p: Path) -> str:
     return value
 
 
+# a secret anyone could guess or has seen (a word, a name, a value once written in a repository)
+# signs a cookie as well as the team's: below this length UI_SECRET is not used
+MIN_SECRET = 32
+
+
 def session_secret(output_root: Path) -> str:
-    """UI_SECRET when it is set; otherwise a random secret kept on the volume (`_ui_secret`,
-    owner-only). Never a fixed fallback: a key in the code is public, and anyone could sign a
-    session cookie with it and skip the team password."""
+    """UI_SECRET when it is set and long enough (MIN_SECRET characters); otherwise a random secret
+    kept on the volume (`_ui_secret`, owner-only). Never a fixed fallback: a key in the code is
+    public, and anyone could sign a session cookie with it and skip the team password. A short
+    UI_SECRET is ignored with a warning, so an install that once set a short or published value
+    keeps signing with the volume's secret."""
     env = (os.getenv("UI_SECRET") or "").strip()
-    if env:
+    if len(env) >= MIN_SECRET:
         return env
+    if env:
+        import logging
+
+        logging.getLogger(__name__).warning("UI_SECRET is shorter than %d characters: not used; the "
+                                            "volume's own secret signs the sessions", MIN_SECRET)
     p = Path(output_root) / "_ui_secret"
     try:
         return p.read_text(encoding="utf-8").strip() or _new_secret(p)

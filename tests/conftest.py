@@ -25,7 +25,7 @@ for _k in KEY_ENVS:
 _TMP = Path(tempfile.mkdtemp(prefix="seo-writer-tests-"))
 os.environ["JOBS_FILE"] = str(_TMP / "jobs.json")
 os.environ["CONTENT_OUTPUT_DIR"] = str(_TMP / "output")
-os.environ["UI_SECRET"] = "test-only-" + os.urandom(8).hex()
+os.environ["UI_SECRET"] = "test-only-" + os.urandom(16).hex()   # long enough to be used (ui/auth.MIN_SECRET)
 os.environ.setdefault("MPLBACKEND", "Agg")
 
 _spec = importlib.util.spec_from_file_location("_netguard", Path(__file__).parent / "netguard" / "sitecustomize.py")

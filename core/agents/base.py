@@ -203,10 +203,11 @@ class BaseAgent:
         shipped = p.read_text(encoding="utf-8") if p.exists() else ""
         over = output_root(self.config) / "_prompts" / f"{self.name}.md"
         if over.is_file():
-            from ..prompt_overrides import with_shipped_contract
+            from ..prompt_overrides import as_run
 
-            # the output format the code parses always runs as shipped
-            return with_shipped_contract(over.read_text(encoding="utf-8"), shipped)
+            # the output format the code parses always runs as shipped, and a slot a later release
+            # added (the project's editorial rules) reaches an edit saved before it
+            return as_run(over.read_text(encoding="utf-8"), shipped)
         return shipped
 
     def edited_prompt_hint(self, name: str | None = None) -> str:

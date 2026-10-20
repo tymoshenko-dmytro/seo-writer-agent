@@ -69,10 +69,48 @@ def is_overridden(output_dir, name: str) -> bool:
 
 
 def current(output_dir, name: str) -> str:
-    """What the agent will use: the team's edit if there is one (its output format as shipped),
-    else the shipped prompt."""
+    """What the agent will use: the team's edit if there is one (its output format as shipped, the
+    slots a later release added put in, `as_run`), else the shipped prompt."""
     p = override_path(output_dir, name)
-    return with_shipped_contract(p.read_text(encoding="utf-8"), shipped(name)) if p.is_file() else shipped(name)
+    return as_run(p.read_text(encoding="utf-8"), shipped(name)) if p.is_file() else shipped(name)
+
+
+def as_run(text: str, shipped_text: str) -> str:
+    """An edited prompt as the agent runs it and its page shows it: the edit's own words, every
+    {{slot}} of the shipped prompt it lacks (one a later release added: an edit saved before it
+    never had it), and the shipped output format."""
+    return with_shipped_contract(with_new_slots(text, shipped_text), shipped_text)
+
+
+# how a slot a release added is written into an edit saved before it; another slot is its shipped
+# line (with the heading right above it)
+_SLOT_TEXT = {"editorial_rules": "## Editorial rules ({{project_name}}'s own; follow every one)\n{{editorial_rules}}",
+              "audience": "The readers: {{audience}}."}
+
+
+def _slot_text(shipped_text: str, name: str) -> str:
+    if name in _SLOT_TEXT:
+        return _SLOT_TEXT[name]
+    lines = shipped_text.splitlines()
+    at = next(i for i, ln in enumerate(lines) if "{{" + name + "}}" in ln)
+    above = lines[at - 1] if at and lines[at - 1].lstrip().startswith("#") else ""
+    return (above + "\n" if above else "") + lines[at]
+
+
+def with_new_slots(text: str, shipped_text: str) -> str:
+    """`text` with each {{slot}} the shipped prompt fills and the edit lacks put in before its
+    output format (or at its end): an edit saved before a release added the project's editorial
+    rules keeps its own words and gets the rules, and its page can be saved again. A slot the edit
+    has is never added twice."""
+    missing = sorted(placeholders(shipped_text) - placeholders(text))
+    if not missing:
+        return text
+    block = "\n\n".join(_slot_text(shipped_text, m) for m in missing)
+    c = contract(text)
+    if c:
+        i = text.index(c)
+        return text[:i].rstrip("\n") + "\n\n" + block + "\n\n" + text[i:]
+    return text.rstrip("\n") + "\n\n" + block + "\n"
 
 
 def placeholders(text: str) -> set[str]:

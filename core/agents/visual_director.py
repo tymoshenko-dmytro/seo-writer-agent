@@ -112,6 +112,11 @@ def _alt_pages(research: dict | None, url: str) -> list[str]:
     return sorted(seen, key=lambda u: -seen[u])
 
 
+def _own_home(brand, url: str) -> bool:
+    """Our own site's homepage (any of its hosts, no path): never a substitute screenshot."""
+    return brand.is_own(url) and not urlparse(url).path.strip("/")
+
+
 def _subject(section: str, url: str) -> tuple[str, str]:
     """(name, host) for a vendor's slot: the product a numbered roundup section names ("5. Amazon
     Polly: best for ..."), else the page's own host - never the bare registrable domain."""
@@ -121,20 +126,27 @@ def _subject(section: str, url: str) -> tuple[str, str]:
     return name or host, host
 
 
-_TITLE_SITE = re.compile(r"\s+(?:[|·•]|[-–—]|::)\s+")
+_TITLE_SITE = re.compile(r"\s+([|·•]|[-–—]|::)\s+")
+_NAME_SMALL = frozenset({"a", "an", "and", "at", "by", "for", "in", "of", "on", "or", "the", "to", "&"})
 
 
-def _page_title(text) -> str:
-    """A page's title as a caption: the page's own name, its site's name after " - " or " | "
-    dropped ("What is the Difference Between Translation and Interpreting?"), never cut with "…"
-    (testers, 2026-10-20: "…American Translators…" under a picture). A very long title is cut at
-    its last word within 160 characters, without an ellipsis."""
+def page_title(text) -> str:
+    """A page's title as a caption: the whole title with only its site's name dropped, never cut
+    and never ended with "…" (testers, 2026-10-20: "…American Translators…" under a picture). The
+    site's name is the short part after the LAST separator: after " | ", " · " or " :: " always,
+    after a dash when it reads as a name ("American Translators Association"), so "Pricing plans -
+    annual versus monthly | Acme" keeps its clause (Codex RA54-01). A title whose own part is one
+    word ("Home - Acme") is kept whole."""
     t = " ".join(re.sub(r"[\[\]*<>`]+", " ", str(text or "")).split())
-    parts = _TITLE_SITE.split(t)
-    if len(parts) > 1 and len(parts[0].split()) >= 2:
-        t = parts[0]
-    if len(t) > 160:
-        t = t[:160].rsplit(" ", 1)[0].rstrip(" ,;:—–-")
+    last = None
+    for last in _TITLE_SITE.finditer(t):
+        pass
+    if last:
+        head, site = t[:last.start()], t[last.end():].split()
+        named = last.group(1) not in "-–—" or all(
+            not w[0].isalpha() or w[0].isupper() or w.lower() in _NAME_SMALL for w in site)
+        if len(head.split()) >= 2 and 0 < len(site) <= 5 and named:
+            t = head
     return t
 
 
@@ -149,7 +161,7 @@ def _page_title(text) -> str:
 # as the page's header or a heading alone).
 _DUP_BITS = 10                 # of 256: a re-encode or a blinking cursor, not a different page
 SHOT_LABELS = ("OK", "REFRAME", "CHALLENGE", "COOKIE_WALL", "OVERLAY", "LOGIN", "BLANK", "PARTIAL",
-               "WRONG_LANGUAGE", "MISMATCH")
+               "WRONG_LANGUAGE", "MISMATCH", "MARKETING")
 REFRAMES = 2                   # times a shot is taken again on the section its look names
 
 
@@ -170,7 +182,7 @@ def _dhash(path) -> int | None:
 
 
 def _vision_prompt(caption: str | None, outline: list[dict] | None = None, want: str | None = None,
-                   words: bool = False) -> str:
+                   words: bool = False, own: bool = False) -> str:
     # Measured on the 62 audited shots, a first wording that asked for "what the caption
     # describes" refused 17 of 50 good ones: the right pricing page, but not the one price the
     # caption named. The judgement is about the page - its subject, readability and rendering -
@@ -207,6 +219,12 @@ def _vision_prompt(caption: str | None, outline: list[dict] | None = None, want:
                      "banner, another section) than the part the person asked for, and one of THE PAGE'S "
                      "SECTIONS below is that part: copy its heading exactly into \"heading\"\n") + extra
             sections = page_sections
+    if own:
+        # our own page is shown only where it shows the product (testers, 2026-10-20: a hero
+        # headline, a call to action, a carousel cut midway were "weird"; Codex RA54-02)
+        extra += ("MARKETING - this is our own site, and the shot shows a marketing section (a hero "
+                  "headline, a slogan, a call to action, a sign-up banner, a carousel, testimonials) "
+                  "instead of the product itself: its interface, a pricing table or a feature screen\n")
     # a shot without words of its own: the look that sees it writes them (the operator, 2026-10-06:
     # a good shot is kept, and a missing caption is written, not borrowed from another page)
     own = ('\n\nThe shot has no caption yet. When it is OK, also write "alt" (one plain sentence: what the '
@@ -252,7 +270,7 @@ def _named(outline: list[dict] | None, name) -> str:
 
 
 def look_at_shot(call, png, caption: str | None, outline: list[dict] | None = None,
-                 want: str | None = None, words: bool = False) -> dict:
+                 want: str | None = None, words: bool = False, own: bool = False) -> dict:
     """One look at a shot: {"label", "why", "heading", "looked"}, and with `words` (a shot with no
     caption of its own) the "alt" and "caption" it writes from what it sees. `call` is an agent's
     call_claude_json. "REFRAME" comes with a heading of the page's own outline to frame instead.
@@ -262,7 +280,7 @@ def look_at_shot(call, png, caption: str | None, outline: list[dict] | None = No
         return {"label": "OK", "why": why, "heading": "", "looked": False}
 
     try:
-        data, _ = call([_shot_block(png), {"type": "text", "text": _vision_prompt(caption, outline, want, words)}],
+        data, _ = call([_shot_block(png), {"type": "text", "text": _vision_prompt(caption, outline, want, words, own)}],
                        max_tokens=2000)
     except Exception as e:  # noqa: BLE001
         return kept(f"vision check unavailable ({str(e)[:80]}); kept on the capture-time checks")
@@ -287,10 +305,10 @@ class ShotLook(BaseAgent):
     MAX_RETRIES = 2         # a look that cannot be had keeps the shot: no long wait for it
 
     def look(self, png, caption: str | None, outline: list[dict] | None = None, want: str | None = None,
-             words: bool = False) -> dict:
+             words: bool = False, own: bool = False) -> dict:
         return look_at_shot(lambda content, max_tokens=None: self.call_claude_json(
             content, system="You look at screenshots taken for an article. Answer only with the JSON asked for.",
-            max_tokens=max_tokens), png, caption, outline, want, words)
+            max_tokens=max_tokens), png, caption, outline, want, words, own)
 
 
 def _section_of(md: str, needle: str) -> str:
@@ -443,9 +461,12 @@ class VisualDirector(BaseAgent):
                         built, diag = self._shoot(url, png, caption, seen, selector=sel, focus=terms)
                         fallback = "retry" if built else None
                     if not built:
-                        # a page a research source leaves out is never a substitute either
+                        # a page a research source leaves out is never a substitute either, nor
+                        # our own homepage: its top is a hero and a call to action, not the
+                        # product (Codex RA54-02)
                         alts = [u for u in _alt_pages(state.research, url)
-                                if not research_sources.leaves_out(out, u, self.project)]
+                                if not research_sources.leaves_out(out, u, self.project)
+                                and not _own_home(self.project.brand, u)]
                         for alt in alts[:2]:
                             # a substitute is captioned by its own title, so it is judged as a
                             # clean page, not against the writer's caption
@@ -463,7 +484,7 @@ class VisualDirector(BaseAgent):
                             # a different page than the one the writer described: say what is in
                             # the image (the page's own title) and keep the writer's words on record
                             name, host = _subject(section, used)
-                            title = _page_title(diag.get("title"))
+                            title = page_title(diag.get("title"))
                             if title:
                                 shown = title if name.lower() in title.lower() else f"{name}: {title}"
                             else:
@@ -775,7 +796,8 @@ so only propose vendors the article actually discusses in sentences (not just ta
             diag["dhash"] = h
             if not ((self.config.get("pipeline") or {}).get("visuals") or {}).get("vision_check"):
                 return built, diag
-            label, why, named = self._vision_label(png, caption, diag.get("outline"))
+            label, why, named = self._vision_label(png, caption, diag.get("outline"),
+                                                   own=self.project.brand.is_own(url))
             diag["vision"] = {"label": label, "why": why, **({"heading": named} if named else {})}
             if label == "REFRAME" and not selector and attempt < REFRAMES and named != heading:
                 heading = named                 # the section it named: shot again there
@@ -791,10 +813,11 @@ so only propose vendors the article actually discusses in sentences (not just ta
             return built, diag
         return None, diag                       # not reached: the last attempt returns
 
-    def _vision_label(self, png: Path, caption: str | None,
-                      outline: list[dict] | None = None) -> tuple[str, str, str]:
-        """The look at a shot (ShotLook, the visuals' model): (label, why, heading to frame on)."""
-        got = ShotLook(self.project, self.config).look(png, caption, outline)
+    def _vision_label(self, png: Path, caption: str | None, outline: list[dict] | None = None,
+                      own: bool = False) -> tuple[str, str, str]:
+        """The look at a shot (ShotLook, the visuals' model): (label, why, heading to frame on).
+        `own`: the page is our own site, shown only where it shows the product."""
+        got = ShotLook(self.project, self.config).look(png, caption, outline, own=own)
         return got["label"], got["why"], got["heading"]
 
     def _chart_specs(self, state, chart_markers) -> dict:

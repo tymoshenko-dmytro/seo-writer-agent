@@ -18,7 +18,7 @@ from pathlib import Path
 
 from .base import BaseAgent
 from .fix_routing import same_page
-from .visual_director import REFRAMES, ShotLook, _focus_terms, next_free
+from .visual_director import REFRAMES, ShotLook, _focus_terms, next_free, page_title
 from .. import research_sources
 from ..producers import charts, infographic, screenshot, image_gen
 from ..tools import scrapfly
@@ -66,7 +66,7 @@ def _written_words(words: dict, look: dict, diag: dict, url: str | None) -> dict
         return {**words, "alt": alt or caption, "caption": caption or alt}
     from urllib.parse import urlparse
 
-    title = (safe_words(" ".join(str(diag.get("title") or "").split())[:120])
+    title = (safe_words(page_title(diag.get("title")))
              or f"A page of {urlparse(url or '').hostname or 'the site'}")
     return {**words, "alt": title, "caption": title, "needs_caption": True}
 

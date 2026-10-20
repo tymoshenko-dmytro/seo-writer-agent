@@ -27,7 +27,6 @@ from .privacy import scrub_errors
 _OPEN, _NUM_END, _CLOSE = "", "", ""
 _INS, _INS_END, _DEL, _DEL_END = "", "", "", ""
 _STANDINS = re.compile("[-]")
-_IMAGE = r"!\[" + store.IMAGE_ALT + r"\]\(\s*<?{src}(?:[?#][^)\s>]*)?>?(?:\s+\"[^\"]*\")?\s*\)"
 
 
 def who(name) -> str:
@@ -202,35 +201,9 @@ def _insert(md: str, spans: list[tuple[int, int, str, str | None]]) -> str:
 # ---------------------------------------------------------------------------------------------
 # where an item sits in the body
 # ---------------------------------------------------------------------------------------------
-def _image_at(body: str, asset: str) -> tuple[int, int] | None:
-    """Where the picture's image is in `body`: its line when it stands alone there, as the page's
-    parser reads it (RC8C-01), else the first image of it inside a sentence."""
-    i = store.picture_line(body, asset)
-    if i is not None:
-        start = sum(len(ln) + 1 for ln in body.split("\n")[:i])
-        return start, start + len(body.split("\n")[i])
-    m = re.search(_IMAGE.format(src=re.escape(asset)), body)
-    return (m.start(), m.end()) if m else None
-
-
-def _caption_at(body: str, at: tuple[int, int]) -> tuple[int, int] | None:
-    """The caption line right under the image at `at`, from its line break to its end, when it is
-    that picture's caption (store.caption_of, R39B-01, R83D-01)."""
-    end = at[1]
-    if not body.startswith("\n", end):
-        return None
-    stop = body.find("\n", end + 1)
-    stop = len(body) if stop < 0 else stop
-    return (end, stop) if store.caption_of(body[at[0]:end], body[end + 1:stop].strip()) else None
-
-
-def _image_span(body: str, asset: str) -> tuple[int, int] | None:
-    """The picture's Markdown, with the caption line under it."""
-    at = _image_at(body, asset)
-    if not at:
-        return None
-    cap = _caption_at(body, at)
-    return at[0], (cap[1] if cap else at[1])
+# core's, so an agent's list and this page put the items in one order (Codex RA54-03)
+_image_at, _caption_at, _image_span = qc.image_at, qc.caption_at, qc.image_span
+_heading_span, _target_span = qc.heading_span, qc.target_span
 
 
 def _picture_marks(body: str, asset: str, n: int, inner_colour_of: int | None = None) -> list[tuple]:
@@ -248,30 +221,6 @@ def _picture_marks(body: str, asset: str, n: int, inner_colour_of: int | None = 
         if b > a:
             out.append((a, b, f"{_OPEN}-{n}{_NUM_END}", None))
     return out
-
-
-def _heading_span(body: str, heading: str) -> tuple[int, int] | None:
-    """The heading's words (after its #s, so a mark keeps it a heading)."""
-    for s in qc.sections(body):
-        if s["heading"] == " ".join(str(heading).split()):
-            line_end = body.find("\n", s["start"])
-            line_end = line_end if line_end >= 0 else len(body)
-            lead = re.match(r"[ \t]*#{1,6}[ \t]*", body[s["start"]:line_end])
-            return s["start"] + (lead.end() if lead else 0), line_end
-    return None
-
-
-def _target_span(body: str, on: dict | None) -> tuple[int, int] | None:
-    if not on:
-        return None
-    if on.get("quote"):
-        at = body.find(on["quote"])
-        return (at, at + len(on["quote"])) if at >= 0 else None
-    if on.get("heading"):
-        return _heading_span(body, on["heading"])
-    if on.get("asset"):
-        return _image_span(body, on["asset"])
-    return None
 
 
 def section_at(body: str, at: int | None) -> str:
@@ -353,18 +302,21 @@ def review_queue(art: store.Article, body: str, rv: dict, costs: dict) -> list[d
                 a, b = span[0] - blk[0], span[1] - blk[0]
                 item["context"] = Markup(_pictures_addressed(art, _render(_insert(md, [(a, b, f"{_OPEN}0{_NUM_END}", None)]))))
                 item["edit_md"] = md.strip()
-        if item["type"] == "proposal" and it.get("action") == "add_picture":
-            item["cost"] = costs.get("visual_insert")
-        elif item["type"] == "proposal" and it.get("action") != "remove_picture" and not item["choices"]:
-            item["cost"] = costs.get("proposals")
-        elif item["type"] == "left":
-            item["cost"] = costs.get("fix")
+        op = agent_door.item_op(it)
+        item["cost"] = costs.get(op) if op else None
         needs.append(item)
     for g in rv.get("changed") or []:
         where = list(g.get("where") or [])
         before, after = list(g.get("before") or []), list(g.get("after") or [])
         first_after = next((a for w, a in zip(where, after) if not str(w).startswith("the frontmatter")), None)
         at = body.find(first_after.strip()) if isinstance(first_after, str) and first_after.strip() else -1
+        found = at >= 0
+        if not found:
+            # a picture made again stands where its picture is (its "after" is a note, not text:
+            # Codex RA54-04)
+            pic = next((str(w) for w in where if str(w).startswith("assets/")), None)
+            spot = qc.image_at(body, pic) if pic else None
+            at = spot[0] if spot else -1
         half = qm.half_done(g)
         item = {"id": g["id"], "group": "needs" if half else "made", "type": "half" if half else "change",
                 "severity": g.get("severity"),
@@ -389,7 +341,7 @@ def review_queue(art: store.Article, body: str, rv: dict, costs: dict) -> list[d
             item["places"].append({"where": w, "html": Markup(_pictures_addressed(art, _render(_diff_standins(str(b or ""), str(a or "")))))
                                    if not w.startswith("the frontmatter") else None,
                                    "before": b, "after": a, "links": links_changed(str(b or ""), str(a or ""))})
-        if at >= 0 and isinstance(first_after, str):
+        if found and isinstance(first_after, str):
             blk = _block(body, (at, at + len(first_after.strip())))
             if blk and body[blk[0]:blk[1]].strip() == first_after.strip():
                 item["edit_md"] = first_after.strip()
@@ -420,7 +372,7 @@ def review_queue(art: store.Article, body: str, rv: dict, costs: dict) -> list[d
     key = (lambda x: (x["at"] is None, x["at"] or 0))
     # what needs the person: the most important first, then the article's order (testers,
     # 2026-10-20: "Critical issues should come first"); what changed stays in the article's order
-    needs.sort(key=lambda x: (qm.severity_rank(x.get("severity")), *key(x)))
+    needs.sort(key=lambda x: qm.queue_key(x.get("severity"), x["at"]))
     made.sort(key=key)
     for n, it in enumerate(needs + made, 1):
         it["n"] = n

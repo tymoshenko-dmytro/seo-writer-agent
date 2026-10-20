@@ -59,8 +59,17 @@ def review_view(art: store.Article) -> dict:
             item["closed"] = f.get("closed")
             item["changed_by"] = f.get("changed_by")
             closed.append(item)
+    from .qa_changes import how_it_reverts, target_span
+
+    # the most important first, then the article's order, as the Review page lists them
+    body = store.split_frontmatter(text)[1] if text is not None else ""
+
+    def at(it):
+        span = target_span(body, it.get("on")) if body else None
+        return span[0] if span else None
+
+    needs.sort(key=lambda it: qm.queue_key(it.get("severity"), at(it)))
     groups = [g for g in rv.get("changes") or [] if g.get("review") == last["id"] and not g.get("reverted")]
-    from .qa_changes import how_it_reverts
 
     texts = {f["id"]: f.get("text") for f in rv.get("findings") or []}
     sevs = {f["id"]: f.get("severity") for f in rv.get("findings") or []}
@@ -208,6 +217,28 @@ def estimate(root, op: str, prices: dict | None = None, last: int = 10) -> dict:
     usd = ESTIMATE_DEFAULTS.get(op, 0.0)
     return {"usd": usd, "basis": "a default: none recorded on this install yet" if usd is not None
             else "paid in the service's credits, which have no price on this install"}
+
+
+def item_op(item: dict) -> str | None:
+    """The paid action a ticked item of what needs the person runs (None: free, or not ticked):
+    what the machine tries again is a fix, a picture added is made, a picture removed costs
+    nothing, any other proposal is made with the proposals."""
+    if item.get("type") == "left":
+        return "fix"
+    if item.get("type") != "proposal" or item.get("action") == "remove_picture" or item.get("choices"):
+        return None
+    return "visual_insert" if item.get("action") == "add_picture" else "proposals"
+
+
+def batch_estimate(root, items: list[dict], prices: dict | None = None) -> dict:
+    """What making these items together is likely to cost: each item's own action's estimate,
+    as the Review page prices each tick (Codex RA54-05). "usd" is None when one has no price."""
+    ests = [estimate(root, op, prices) for op in (item_op(it) for it in items) if op]
+    if any(e["usd"] is None for e in ests):
+        return {"usd": None, "basis": "one of them is paid in a service's credits, which have no price here"}
+    bases = sorted({e["basis"] for e in ests})
+    return {"usd": round(sum(e["usd"] for e in ests), 2),
+            "basis": "the sum of each change's own estimate" + (f" ({'; '.join(bases)})" if bases else "")}
 
 
 def run_minutes(root, op: str = "generation", last: int = 10) -> dict:

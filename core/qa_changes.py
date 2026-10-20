@@ -186,6 +186,65 @@ def sections(body: str) -> list[dict]:
     return out
 
 
+# where an item sits in the body (the Review page and an agent's list order by it)
+_IMAGE_OF = r"!\[" + store.IMAGE_ALT + r"\]\(\s*<?{src}(?:[?#][^)\s>]*)?>?(?:\s+\"[^\"]*\")?\s*\)"
+
+
+def image_at(body: str, asset: str) -> tuple[int, int] | None:
+    """Where the picture's image is in `body`: its line when it stands alone there, as the page's
+    parser reads it (RC8C-01), else the first image of it inside a sentence."""
+    i = store.picture_line(body, asset)
+    if i is not None:
+        start = sum(len(ln) + 1 for ln in body.split("\n")[:i])
+        return start, start + len(body.split("\n")[i])
+    m = re.search(_IMAGE_OF.format(src=re.escape(asset)), body)
+    return (m.start(), m.end()) if m else None
+
+
+def caption_at(body: str, at: tuple[int, int]) -> tuple[int, int] | None:
+    """The caption line right under the image at `at`, from its line break to its end, when it is
+    that picture's caption (store.caption_of, R39B-01, R83D-01)."""
+    end = at[1]
+    if not body.startswith("\n", end):
+        return None
+    stop = body.find("\n", end + 1)
+    stop = len(body) if stop < 0 else stop
+    return (end, stop) if store.caption_of(body[at[0]:end], body[end + 1:stop].strip()) else None
+
+
+def image_span(body: str, asset: str) -> tuple[int, int] | None:
+    """The picture's Markdown, with the caption line under it."""
+    at = image_at(body, asset)
+    if not at:
+        return None
+    cap = caption_at(body, at)
+    return at[0], (cap[1] if cap else at[1])
+
+
+def heading_span(body: str, heading: str) -> tuple[int, int] | None:
+    """The heading's words (after its #s, so a mark keeps it a heading)."""
+    for s in sections(body):
+        if s["heading"] == " ".join(str(heading).split()):
+            line_end = body.find("\n", s["start"])
+            line_end = line_end if line_end >= 0 else len(body)
+            lead = re.match(r"[ \t]*#{1,6}[ \t]*", body[s["start"]:line_end])
+            return s["start"] + (lead.end() if lead else 0), line_end
+    return None
+
+
+def target_span(body: str, on: dict | None) -> tuple[int, int] | None:
+    if not on:
+        return None
+    if on.get("quote"):
+        at = body.find(on["quote"])
+        return (at, at + len(on["quote"])) if at >= 0 else None
+    if on.get("heading"):
+        return heading_span(body, on["heading"])
+    if on.get("asset"):
+        return image_span(body, on["asset"])
+    return None
+
+
 def _changed(old: str, new: str) -> tuple[int, int, int]:
     """(start, old_end, new_end): the one stretch where `new` differs from `old`."""
     n = min(len(old), len(new))

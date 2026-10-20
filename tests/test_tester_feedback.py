@@ -66,20 +66,23 @@ def test_the_brief_the_writer_and_the_review_put_our_product_near_the_top(output
 
 
 # ---- no text cut with "…" ------------------------------------------------------------------------
+LONG = "A " + "very " * 60 + "long title"
+
+
 @pytest.mark.parametrize("title,shown", [
     ("What is the Difference Between Translation and Interpreting? - American Translators Association",
      "What is the Difference Between Translation and Interpreting?"),
     ("Pricing plans | Acme", "Pricing plans"),
     ("Home - Acme", "Home - Acme"),          # one word before the site's name: the whole title
-    ("A " + "very " * 60 + "long title", None),
+    # only the site's name goes: a clause after a dash stays (RA54-01)
+    ("Pricing plans - annual versus monthly | Acme", "Pricing plans - annual versus monthly"),
+    ("Pricing plans - annual versus monthly", "Pricing plans - annual versus monthly"),
+    (LONG, LONG),                            # never cut (RA54-01: no silent cut either)
 ])
 def test_a_page_title_caption_is_never_cut_with_an_ellipsis(title, shown):
-    from core.agents.visual_director import _page_title
+    from core.agents.visual_director import page_title
 
-    got = _page_title(title)
-    assert "…" not in got and len(got) <= 160
-    if shown:
-        assert got == shown
+    assert page_title(title) == shown
 
 
 # ---- no picture made of text ------------------------------------------------------------------------

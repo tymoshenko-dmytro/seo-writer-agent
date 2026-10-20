@@ -80,16 +80,15 @@ def _article(args, root):
         _refuse(args, "unknown", f"no article '{args.slug}' here")
 
 
-def _paid(args, root, prices, op: str, label: str, times: int = 1) -> dict:
-    """A command that spends money says what it is likely to cost first. Without a terminal it
-    needs --yes (an agent states the cost to its person, then runs it); in a terminal it asks."""
+def _paid(args, root, prices, op: str | None, label: str, est: dict | None = None) -> dict:
+    """A command that spends money says what it is likely to cost first (`est`, else the estimate
+    of `op`). Without a terminal it needs --yes (an agent states the cost to its person, then
+    runs it); in a terminal it asks."""
     import sys
 
     from core.agent_door import estimate
 
-    est = estimate(root, op, prices)
-    if est["usd"] is not None:
-        est = {**est, "usd": round(est["usd"] * times, 2)}
+    est = est or estimate(root, op, prices)
     cost = f"about ${est['usd']:.2f}" if est["usd"] is not None else "money"
     if getattr(args, "yes", False):
         return est
@@ -216,7 +215,10 @@ def _agent_command(args) -> bool:
             est = _paid(args, root, prices, "review", "Review again")
             out = _acting(args, lambda: review(art.slug, config=cfg, project=proj, version=args.version))
         elif cmd == "apply":
-            est = _paid(args, root, prices, "proposals", f"Apply {len(args.ids)} proposal(s)", times=len(args.ids))
+            # each ticked item at its own action's price, as the Review page shows them (RA54-05)
+            ticked = [i for i in agent_door.review_view(art).get("needs_you") or [] if i["id"] in args.ids]
+            est = _paid(args, root, prices, None, f"Make {len(args.ids)} change(s)",
+                        est=agent_door.batch_estimate(root, ticked, prices))
             out = _acting(args, lambda: qc.apply_proposals(art.slug, args.ids, args.version, args.review, config=cfg, project=proj))
         elif cmd == "fix-again":
             est = _paid(args, root, prices, "fix", "Try again")

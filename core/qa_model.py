@@ -86,6 +86,13 @@ def severity_rank(sev) -> int:
     return _RANK[norm_severity(sev)]
 
 
+def queue_key(severity, at: int | None) -> tuple:
+    """An item's place in what needs the person: the most important first, then the article's
+    order, an item the article does not show last (testers, 2026-10-20). The Review page and an
+    agent's list sort by it alike (Codex RA54-03)."""
+    return severity_rank(severity), at is None, at or 0
+
+
 def worst(severities) -> str:
     """The most important of several severities ("unknown" when there are none)."""
     found = [norm_severity(s) for s in severities if s]

@@ -26,6 +26,7 @@ from __future__ import annotations
 
 import importlib.util
 import logging
+import sys
 from pathlib import Path
 from types import ModuleType
 
@@ -50,11 +51,16 @@ def sources(project) -> list[ModuleType]:
     if key not in _LOADED:
         loaded = []
         for p in files:
+            name = f"research_source_{p.stem}"
             try:
-                spec = importlib.util.spec_from_file_location(f"research_source_{p.stem}", p)
+                spec = importlib.util.spec_from_file_location(name, p)
                 mod = importlib.util.module_from_spec(spec)
+                # registered before it runs, as an import is: a dataclass (or anything else that
+                # looks its module up) in the source needs it
+                sys.modules[name] = mod
                 spec.loader.exec_module(mod)
             except Exception as e:  # noqa: BLE001 — a broken source is left out, never a failed run
+                sys.modules.pop(name, None)
                 _log.warning("research source %s could not be loaded: %s", p.name, e)
                 continue
             if not callable(getattr(mod, "gate", None)) or not callable(getattr(mod, "corpus_block", None)):

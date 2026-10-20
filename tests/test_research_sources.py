@@ -9,8 +9,16 @@ from types import SimpleNamespace
 import pytest
 
 SOURCE = '''
+from dataclasses import dataclass
+
 NAME = "board"
 KEEP = ("_board_snapshot.json",)
+
+
+@dataclass
+class Row:                      # a source is a module like any other: a dataclass must load
+    model: str
+    ms: int
 
 
 def gate(article_dir, topic, keyword, project):
@@ -22,7 +30,8 @@ def gate(article_dir, topic, keyword, project):
     if "{off_word}" in topic.lower():
         off.write_text("off")
         return "off"
-    snap.write_text("Widget 812 ms")
+    row = Row("Widget", 812)
+    snap.write_text(f"{row.model} {row.ms} ms")
     return "on"
 
 

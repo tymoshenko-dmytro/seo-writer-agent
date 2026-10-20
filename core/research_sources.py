@@ -36,7 +36,7 @@ from types import ModuleType
 
 DIR = "research_sources"
 _log = logging.getLogger(__name__)
-_LOADED: dict[tuple[str, tuple], list[ModuleType]] = {}
+_LOADED: dict[tuple[str, int, int], ModuleType | None] = {}
 
 
 def _root(project) -> Path | None:
@@ -45,7 +45,7 @@ def _root(project) -> Path | None:
 
 
 def sources(project) -> list[ModuleType]:
-    """The project's sources, loaded once per folder and its files' times and sizes."""
+    """The project's sources, each file loaded once per its time and size."""
     root = _root(project)
     folder = root / DIR if root else None
     try:
@@ -55,18 +55,25 @@ def sources(project) -> list[ModuleType]:
     except OSError as e:
         _log.warning("research sources could not be listed: %s", e)
         return []
-    stamps = []
+    out = []
     for p in files:
         try:
             st = p.stat()
         except OSError as e:          # a dangling link, a file gone meanwhile: that one is left out
             _log.warning("research source %s could not be read: %s", p.name, e)
             continue
-        stamps.append((p, st.st_mtime_ns, st.st_size))
-    key = (str(folder.resolve()), tuple((p.name, m, n) for p, m, n in stamps))
-    if key not in _LOADED:
-        _LOADED[key] = [mod for mod in (_load(p) for p, _, _ in stamps) if mod is not None]
-    return _LOADED[key]
+        key = (str(p.resolve()), st.st_mtime_ns, st.st_size)
+        if key not in _LOADED:
+            # one entry per file: a file whose text changed replaces its older entry, and a
+            # neighbour added or removed never runs an unchanged file again
+            for old in [k for k in _LOADED if k[0] == key[0]]:
+                del _LOADED[old]
+            _LOADED[key] = _load(p)
+        mod = _LOADED[key]
+        if mod is not None:
+            sys.modules[mod.__name__] = mod      # the registration is always the module in use
+            out.append(mod)
+    return out
 
 
 def _load(p: Path) -> ModuleType | None:

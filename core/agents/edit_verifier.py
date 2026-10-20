@@ -89,7 +89,7 @@ class EditVerifier(BaseAgent):
         rules = (self.project.editorial_rules or "").strip()
         user = (f"PRODUCT FACTS\n{self.project.product_facts}\n\n"
                 + (f"EDITORIAL RULES\n{rules}\n\n" if rules else "")
-                + f"RESEARCH\n{self.render_corpus(state.research)}\n\n"
+                + f"RESEARCH\n{self.render_corpus(state.research, state.output_dir)}\n\n"
                 f"ARTICLE AS IT IS NOW\n{state.draft_markdown}\n\n"
                 + (f"FAQ AS IT IS NOW\n{faq_text}\n\n" if faq_text else "")
                 + "CHECKLIST ITEMS AND WHAT THE FIXER DID\n" + "\n\n".join(items))

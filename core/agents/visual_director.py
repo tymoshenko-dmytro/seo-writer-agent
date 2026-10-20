@@ -26,6 +26,7 @@ from urllib.parse import urlparse
 
 from .base import BaseAgent
 from ..producers import charts, screenshot, infographic, cover as cover_producer
+from .. import research_sources
 from ..tools import scrapfly
 from ..store import atomic_write_text
 
@@ -417,6 +418,12 @@ class VisualDirector(BaseAgent):
                 a = _attrs(m.group(2))
                 url = a.get("url")
                 caption = a.get("caption") or url
+                if url and research_sources.leaves_out(out, url, self.project):
+                    # a project's own research source leaves this page out of the article: the
+                    # marker goes and, with no refusal reason recorded, the editor does not ask
+                    # for the slot back
+                    state.note(f"[visuals] screenshot dropped, left out by a research source: {url}")
+                    url = None
                 # the section is recorded so a refused capture can be reported against the place
                 # it was meant for, and so the report can tell when a substitute has filled it
                 section = _section_of(md, m.group(0))
@@ -568,7 +575,9 @@ class VisualDirector(BaseAgent):
         existing_alts = re.findall(r"!\[([^\]]+)\]\(assets/", md)
         existing_block = "\n".join(f"- {a[:140]}" for a in existing_alts) or "(none)"
         r = state.research or {}
-        srcs = r.get("sources") or []
+        # a page a project's own research source leaves out of this article is not offered
+        srcs = [s for s in (r.get("sources") or [])
+                if not research_sources.leaves_out(state.output_dir, (s or {}).get("url"), self.project)]
         sources = "\n".join(
             f"- {s.get('title') or ''} | {s.get('url')}" for s in srcs[:25]
         ) or "(none)"
@@ -823,7 +832,7 @@ so only propose vendors the article actually discusses in sentences (not just ta
         # without sources). `_enrich` keeps its own short slice on purpose: it only PROPOSES
         # visuals, and every chart it proposes is built here, against the full corpus, with
         # skip=true when the numbers are not there.
-        facts_block = self.render_corpus(state.research)
+        facts_block = self.render_corpus(state.research, state.output_dir)
 
         markers_block = "\n".join(
             f"MARKER {i}: {m.group(2).strip()[:400]}" for i, m in enumerate(chart_markers, 1)

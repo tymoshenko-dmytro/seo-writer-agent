@@ -782,9 +782,10 @@ def uncited_numeral_paragraphs(markdown: str, attested_numbers: set[str] | None 
     return [p for _, p in out[:cap]]
 
 
-def attested_numbers_from(product_facts: str) -> set[str]:
-    """Numbers that need no external citation: our own product facts."""
-    text = product_facts or ""
+def attested_numbers_from(product_facts: str, sources_text: str = "") -> set[str]:
+    """Numbers that need no external citation: our own product facts, and what the project's own
+    research sources give this article (core/research_sources.py)."""
+    text = (product_facts or "") + "\n" + (sources_text or "")
     return {n.strip(",.").rstrip("%") for n in _NUMERAL.findall(text)}
 
 

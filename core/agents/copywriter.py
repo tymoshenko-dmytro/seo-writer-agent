@@ -36,6 +36,13 @@ class Copywriter(BaseAgent):
     def run(self, state):
         state.current_agent = "copywriter"
         out = Path(state.output_dir)
+        # the project's own research sources decide, before the first view of the research,
+        # whether this article is theirs (core/research_sources.py)
+        from ..research_sources import gate_all
+
+        for name in gate_all(out, state.topic, (state.keyword_research or {}).get("primary_keyword") or "",
+                             self.project):
+            state.note(f"[copywriter] research source {name}: left out, not this article's subject")
         user = self._draft_message(state)
         md = _strip_fence(self.call_claude(user, max_tokens=16000))  # long articles must not truncate mid-table
         # enforce "each URL linked once" here rather than at publish time, so the editor, the
@@ -157,7 +164,7 @@ ARTICLE (for grounding):
 {state.draft_markdown}
 
 RESEARCHED FACTS (the only sourced material; a claim about a third party must come from here):
-{self.render_corpus(state.research)}
+{self.render_corpus(state.research, state.output_dir)}
 
 Return ONLY JSON: {{"faq": [{{"question": "...", "answer": "..."}}]}}"""
         data, _ = self.call_claude_json(user, max_tokens=3000)
@@ -181,7 +188,7 @@ Return ONLY JSON: {{"faq": [{{"question": "...", "answer": "..."}}]}}"""
     # ---- facts the writer is allowed to use ----
     def _facts_block(self, state) -> str:
         # the shared view: the editor, the fixer's re-check and the FAQ answerer see these bytes
-        return self.render_corpus(state.research)
+        return self.render_corpus(state.research, state.output_dir)
 
     @staticmethod
     def _citation_target(state, target_words: int) -> tuple[int, int]:

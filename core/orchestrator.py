@@ -352,8 +352,8 @@ def generate_article(topic: str, status_callback=None, on_folder=None, **overrid
     keyword research, brief and research corpus. Same inputs, new pipeline — the only honest
     way to attribute a difference to a code change rather than to a different sampling roll.
     The re-run writes to its OWN directory (`reuse_out`, default `<slug>--rerun-<timestamp>`,
-    which must not exist) and copies the source's pinned benchmark snapshot so the inputs really
-    are the same. `reuse_in_place=True` regenerates the source folder on purpose, keeping its
+    which must not exist) and copies what the project's own research sources pinned in the source
+    folder, so the inputs really are the same. `reuse_in_place=True` regenerates the source folder on purpose, keeping its
     WordPress binding (`_wp.json`). `on_folder(slug)` is told the folder as soon as it exists (the
     Studio's job links to the article while it is being written).
     """
@@ -404,7 +404,11 @@ def generate_article(topic: str, status_callback=None, on_folder=None, **overrid
 
         # the reports of the stages this run reuses instead of running: without them the new
         # folder's trail started at the draft (webinar, ai-interpreter on prod, 2026-09-29)
-        for name in ("01_keyword_research.md", "02_brief.md", "03_research.md"):
+        # and what the project's own research sources kept in it (core/research_sources.py: a
+        # pinned snapshot), so the inputs really are the same
+        from .research_sources import keep_files
+
+        for name in ("01_keyword_research.md", "02_brief.md", "03_research.md", *keep_files(project)):
             if (src_dir / name).exists():
                 shutil.copyfile(src_dir / name, art.path(name))
     else:

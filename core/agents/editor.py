@@ -340,7 +340,10 @@ class Editor(BaseAgent):
         """Code-generated attention routing for ONE read per round. Hints, never verdicts."""
         try:
             ents = gap_entities(state.research, state.draft_markdown)
-            attested = attested_numbers_from(self.project.product_facts)
+            from ..research_sources import corpus_blocks
+
+            attested = attested_numbers_from(self.project.product_facts,
+                                             corpus_blocks(state.output_dir, self.project))
             paras = uncited_numeral_paragraphs(state.draft_markdown, attested)
         except Exception as e:  # noqa: BLE001 — hints must never fail a round
             state.note(f"[editor] hint block unavailable: {e}")
@@ -534,7 +537,7 @@ CONTENT THE BRIEF ORDERED PER SECTION (check each was actually built and fully p
 RESEARCHED FACTS — the view the writer was given, byte for byte. Any statistic or third-party
 claim in the article MUST trace here (with an inline link); anything under GAPS must NOT be
 presented as fact:
-{self.render_corpus(state.research)}
+{self.render_corpus(state.research, state.output_dir)}
 
 VISUALS THAT SHIP WITH THIS ARTICLE (the body markdown is not the whole picture):
 {self._visuals_block(state)}

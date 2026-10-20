@@ -285,8 +285,9 @@ class BaseAgent:
         cut = len(out) > BaseAgent.MAX_CITABLE_FACTS
         return out[:BaseAgent.MAX_CITABLE_FACTS], cut
 
-    def render_corpus(self, research: dict | None) -> str:
-        """THE view of the research every agent gets, byte for byte.
+    def render_corpus(self, research: dict | None, article_dir=None) -> str:
+        """THE view of the research every agent gets, byte for byte; with the article's folder,
+        the project's own research sources add theirs (core/research_sources.py).
 
         Five components used to see the corpus five different ways: the writer grouped by
         question with summaries; the editor a flat list worded apart; the fixer's span re-check a
@@ -352,8 +353,12 @@ class BaseAgent:
                      "as fact")
             L += [f"- {g}" for g in gaps]
             L += [f'- asked, not answered: "{q}"' for q in unanswered]
-        return ("\n".join(L).strip()
+        text = ("\n".join(L).strip()
                 or "(no researched facts — introduce no statistics or third-party claims)")
+        from ..research_sources import corpus_blocks
+
+        extra = corpus_blocks(article_dir, self.project)
+        return text + ("\n\n" + extra if extra else "")
 
     @staticmethod
     def length_sample(bench: dict | None) -> dict:

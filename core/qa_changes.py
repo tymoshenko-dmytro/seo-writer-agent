@@ -259,6 +259,11 @@ def seed_state(art: Article, block: str, body: str, run: dict, project):
     state = ArticleState(topic=run.get("topic") or brief.get("title") or art.slug, slug=art.slug)
     state.output_dir = str(art.dir)
     state.brief, state.research, state.keyword_research = brief, research, kr
+    # the project's own research sources decide for an article written before they did (their
+    # decision is kept in its folder, so the review reads what the writer read)
+    from .research_sources import gate_all
+
+    gate_all(art.dir, state.topic, kr.get("primary_keyword") or "", project)
     state.draft_markdown = body
     try:
         from .keyword_report import analyze, thresholds_from

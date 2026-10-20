@@ -53,6 +53,17 @@ The setup and Configure > Project write it:
 Each can be left empty and written later. From the command line:
 `cli.py project --text editorial_rules --file rules.md`.
 
+### Your own research sources (optional)
+
+Data your project reads by itself that the web research cannot find (a leaderboard drawn by
+JavaScript, an internal price list) can join the research for the articles it is meant for: a
+Python file in the project folder, `research_sources/<name>.py`, with `gate()` (is this article
+in its scope; it keeps its decision in the article's folder), `corpus_block()` (what it adds to
+the research every agent reads) and, optionally, `leaves_out()` (pages the article must not use)
+and `KEEP` (files a rerun copies). The contract is at the top of `core/research_sources.py`. It
+is code from your own project folder, run as the Studio: nothing in the interface adds one.
+Without the folder nothing changes.
+
 ## The settings
 
 Configure > Research and Configure > Publishing (or `cli.py settings get|set|reset`): the search

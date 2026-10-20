@@ -10,6 +10,9 @@ Audience: {{audience}}
 ## {{project_name}}'s products (to know which exist)
 {{product_facts}}
 
+## Editorial rules ({{project_name}}'s own; plan the article so it can follow every one)
+{{editorial_rules}}
+
 ## Your job
 You are given SERP-derived research: ranked keyword clusters, what the ranking pages cover and
 how they are built, the content gap, competitor outlines, and the questions people ask.

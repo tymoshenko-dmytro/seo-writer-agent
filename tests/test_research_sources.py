@@ -198,3 +198,24 @@ def test_a_rerun_copies_what_the_source_pinned(tmp_path, monkeypatch):
     assert again["status"] == "success", again.get("error")
     rerun = store.Repository(tmp_path / "out").get(again["slug"])
     assert rerun.path("_board_snapshot.json").read_text() == "Widget 640 ms (pinned earlier)"
+
+
+@pytest.mark.parametrize("agent", ["BriefGenerator", "Copywriter", "Editor", "VisualDirector", "VisualChecker"])
+def test_the_projects_editorial_rules_reach_the_plan_the_text_and_the_pictures(tmp_path, monkeypatch, agent):
+    """A project's own rules reach every agent that decides what the article says or shows: the
+    brief plans around them, the charts and the picture check follow them, as the writer and the
+    review do (an agent without them planned or drew what the rules forbid)."""
+    import importlib
+
+    from core.config import load_core_config, load_project
+
+    project = _project(tmp_path, source=None)
+    (project / "editorial_rules.md").write_text("RULE-7: never chart a price without its date.", encoding="utf-8")
+    monkeypatch.setenv("CONTENT_PROJECT_DIR", str(project))
+    monkeypatch.setenv("CONTENT_OUTPUT_DIR", str(tmp_path / "out"))
+    cfg = load_core_config()
+    mod = {"BriefGenerator": "brief_generator", "Copywriter": "copywriter", "Editor": "editor",
+           "VisualDirector": "visual_director", "VisualChecker": "visual_checker"}[agent]
+    cls = getattr(importlib.import_module(f"core.agents.{mod}"), agent)
+    text = cls(load_project(core=cfg), cfg).system_prompt()
+    assert "RULE-7: never chart a price without its date." in text and "{{editorial_rules}}" not in text

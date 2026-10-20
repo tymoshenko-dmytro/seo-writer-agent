@@ -309,14 +309,9 @@ def review_queue(art: store.Article, body: str, rv: dict, costs: dict) -> list[d
         where = list(g.get("where") or [])
         before, after = list(g.get("before") or []), list(g.get("after") or [])
         first_after = next((a for w, a in zip(where, after) if not str(w).startswith("the frontmatter")), None)
-        at = body.find(first_after.strip()) if isinstance(first_after, str) and first_after.strip() else -1
-        found = at >= 0
-        if not found:
-            # a picture made again stands where its picture is (its "after" is a note, not text:
-            # Codex RA54-04)
-            pic = next((str(w) for w in where if str(w).startswith("assets/")), None)
-            spot = qc.image_at(body, pic) if pic else None
-            at = spot[0] if spot else -1
+        # its text, else its picture: where an agent's queue puts it too (core's group_at)
+        found = qc.group_at(body, g)
+        at = -1 if found is None else found
         half = qm.half_done(g)
         item = {"id": g["id"], "group": "needs" if half else "made", "type": "half" if half else "change",
                 "severity": g.get("severity"),
@@ -341,7 +336,7 @@ def review_queue(art: store.Article, body: str, rv: dict, costs: dict) -> list[d
             item["places"].append({"where": w, "html": Markup(_pictures_addressed(art, _render(_diff_standins(str(b or ""), str(a or "")))))
                                    if not w.startswith("the frontmatter") else None,
                                    "before": b, "after": a, "links": links_changed(str(b or ""), str(a or ""))})
-        if found and isinstance(first_after, str):
+        if at >= 0 and isinstance(first_after, str):
             blk = _block(body, (at, at + len(first_after.strip())))
             if blk and body[blk[0]:blk[1]].strip() == first_after.strip():
                 item["edit_md"] = first_after.strip()

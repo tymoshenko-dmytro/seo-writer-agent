@@ -127,26 +127,40 @@ def _subject(section: str, url: str) -> tuple[str, str]:
 
 
 _TITLE_SITE = re.compile(r"\s+([|·•]|[-–—]|::)\s+")
-_NAME_SMALL = frozenset({"a", "an", "and", "at", "by", "for", "in", "of", "on", "or", "the", "to", "&"})
 
 
-def page_title(text) -> str:
+def _names_site(part: str, host: str) -> bool:
+    """`part` of a page title is the name of the site at `host`: its letters are the host's name
+    ("Example Vendor" at example-vendor.com), or its initials begin it ("American Translators
+    Association" at atanet.org)."""
+    label = re.sub(r"[^a-z0-9]", "", _registrable(host).split(".")[0]) if host else ""
+    words = re.findall(r"[a-z0-9]+", part.lower())
+    if not label or not words or len(words) > 5:
+        return False
+    joined, initials = "".join(words), "".join(w[0] for w in words)
+    return ((len(joined) >= 3 and joined in label) or (len(label) >= 3 and label in joined)
+            or (len(initials) >= 2 and label.startswith(initials)))
+
+
+def page_title(text, url: str | None = None) -> str:
     """A page's title as a caption: the whole title with only its site's name dropped, never cut
     and never ended with "…" (testers, 2026-10-20: "…American Translators…" under a picture). The
-    site's name is the short part after the LAST separator: after " | ", " · " or " :: " always,
-    after a dash when it reads as a name ("American Translators Association"), so "Pricing plans -
-    annual versus monthly | Acme" keeps its clause (Codex RA54-01). A title whose own part is one
-    word ("Home - Acme") is kept whole."""
+    site's name is the part at either end that names the page's own host (`url`), or the short
+    part after a last " | " (" · ", " :: "). After a dash, words that do not name the host are the
+    title's own ("Pricing plans - Annual Versus Monthly" stays whole: Codex RA54-01, RA5D-01)."""
     t = " ".join(re.sub(r"[\[\]*<>`]+", " ", str(text or "")).split())
-    last = None
-    for last in _TITLE_SITE.finditer(t):
-        pass
-    if last:
-        head, site = t[:last.start()], t[last.end():].split()
-        named = last.group(1) not in "-–—" or all(
-            not w[0].isalpha() or w[0].isupper() or w.lower() in _NAME_SMALL for w in site)
-        if len(head.split()) >= 2 and 0 < len(site) <= 5 and named:
-            t = head
+    seps = list(_TITLE_SITE.finditer(t))
+    if not seps:
+        return t
+    host = urlparse(url or "").hostname or ""
+    head, tail = t[:seps[-1].start()], t[seps[-1].end():]
+    lead, rest = t[:seps[0].start()], t[seps[0].end():]
+    if _names_site(tail, host):
+        return head
+    if _names_site(lead, host):
+        return rest
+    if seps[-1].group(1) not in "-–—" and len(tail.split()) <= 5:
+        return head
     return t
 
 
@@ -224,7 +238,8 @@ def _vision_prompt(caption: str | None, outline: list[dict] | None = None, want:
         # headline, a call to action, a carousel cut midway were "weird"; Codex RA54-02)
         extra += ("MARKETING - this is our own site, and the shot shows a marketing section (a hero "
                   "headline, a slogan, a call to action, a sign-up banner, a carousel, testimonials) "
-                  "instead of the product itself: its interface, a pricing table or a feature screen\n")
+                  "instead of the product itself: its interface, a pricing table or a feature screen"
+                  + (", and the person did not ask for that section\n" if want else "\n"))
     # a shot without words of its own: the look that sees it writes them (the operator, 2026-10-06:
     # a good shot is kept, and a missing caption is written, not borrowed from another page)
     own = ('\n\nThe shot has no caption yet. When it is OK, also write "alt" (one plain sentence: what the '
@@ -484,7 +499,7 @@ class VisualDirector(BaseAgent):
                             # a different page than the one the writer described: say what is in
                             # the image (the page's own title) and keep the writer's words on record
                             name, host = _subject(section, used)
-                            title = page_title(diag.get("title"))
+                            title = page_title(diag.get("title"), used)
                             if title:
                                 shown = title if name.lower() in title.lower() else f"{name}: {title}"
                             else:

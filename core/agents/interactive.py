@@ -66,7 +66,7 @@ def _written_words(words: dict, look: dict, diag: dict, url: str | None) -> dict
         return {**words, "alt": alt or caption, "caption": caption or alt}
     from urllib.parse import urlparse
 
-    title = (safe_words(page_title(diag.get("title")))
+    title = (safe_words(page_title(diag.get("title"), url))
              or f"A page of {urlparse(url or '').hostname or 'the site'}")
     return {**words, "alt": title, "caption": title, "needs_caption": True}
 
@@ -342,9 +342,12 @@ class VisualProducerService(BaseAgent):
                     words = own or (alt if same else "") or feedback
                     if not self._render(d, "screenshot", t, trial, diag=diag, focus_text=t.get("focus") or words):
                         break
+                    # a shot of our own site is kept only where it shows the product (MARKETING),
+                    # on every place it takes: the first, a candidate, a new frame (Codex RA5D-02)
                     look = (ShotLook(self.project, self.config).look(trial, None if need_words else words,
                                                                      diag.get("outline"), want=feedback or None,
-                                                                     words=need_words)
+                                                                     words=need_words,
+                                                                     own=self.project.brand.is_own(t.get("url")))
                             if looks else {"looked": False})
                     if look.get("looked") and look["label"] == "REFRAME" and attempt < REFRAMES and look["heading"] != heading:
                         heading = look["heading"]       # the section it named: shot again there

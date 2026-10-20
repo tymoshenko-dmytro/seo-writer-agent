@@ -245,6 +245,19 @@ def target_span(body: str, on: dict | None) -> tuple[int, int] | None:
     return None
 
 
+def group_at(body: str, g: dict) -> int | None:
+    """Where a change group stands in the body: its first changed text, else its picture (a
+    picture made again has a note for its "after", not text: Codex RA54-04); None when the body
+    shows neither."""
+    where, after = list(g.get("where") or []), list(g.get("after") or [])
+    first = next((a for w, a in zip(where, after) if not str(w).startswith("the frontmatter")), None)
+    if isinstance(first, str) and first.strip() and body.find(first.strip()) >= 0:
+        return body.find(first.strip())
+    pic = next((str(w) for w in where if str(w).startswith("assets/")), None)
+    spot = image_at(body, pic) if pic else None
+    return spot[0] if spot else None
+
+
 def _changed(old: str, new: str) -> tuple[int, int, int]:
     """(start, old_end, new_end): the one stretch where `new` differs from `old`."""
     n = min(len(old), len(new))

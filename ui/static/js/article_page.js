@@ -176,7 +176,11 @@
     const acceptPrimary = accept && accept.classList.contains('btn-primary');
     const update = () => {
       const on = picks().filter(p => p.checked);
-      const price = p => parseFloat((p.dataset.cost || '').replace(/[^0-9.]/g, '')) || each;
+      // an item's own estimate, $0.00 included; the batch's only when it has none (Codex RA5D-04)
+      const price = p => {
+        const n = parseFloat((p.dataset.cost || '').replace(/[^0-9.]/g, ''));
+        return Number.isFinite(n) ? n : each;
+      };
       const total = on.filter(p => p.dataset.paid === '1').reduce((sum, p) => sum + price(p), 0);
       // a ticked proposal whose key the install lacks keeps the batch off, and says which key;
       // a picture's removal is code and needs none

@@ -148,8 +148,10 @@ def _agent_command(args) -> bool:
         elif cmd == "findings":
             v = agent_door.review_view(art)
             lines = [f"review {(v.get('review') or {}).get('id') or '—'} · score {v.get('score')}"]
-            lines += [f"  needs you  {i['id']:<8} {i['type']:<9} {i['text']}" for i in v.get("needs_you") or []]
-            lines += [f"  changed    {g['id']:<8} {'reverts now' if g['reverts_now'] else ''}" for g in v.get("changed") or []]
+            # what needs the person in the Review page's order, a half-done change among them
+            lines += [f"  needs you  {i['id']:<8} {i['type']:<9} {i['text']}" for i in v.get("queue") or []]
+            lines += [f"  changed    {g['id']:<8} {'reverts now' if g['reverts_now'] else ''}"
+                      for g in v.get("changed") or [] if not g["half_done"]]
             _emit(args, {"ok": True, "version": art.version(), **v}, lines)
         elif cmd == "versions":
             vs = versions.listing(art)

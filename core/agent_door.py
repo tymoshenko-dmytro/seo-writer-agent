@@ -59,7 +59,7 @@ def review_view(art: store.Article) -> dict:
             item["closed"] = f.get("closed")
             item["changed_by"] = f.get("changed_by")
             closed.append(item)
-    from .qa_changes import how_it_reverts, target_span
+    from .qa_changes import group_at, how_it_reverts, target_span
 
     # the most important first, then the article's order, as the Review page lists them
     body = store.split_frontmatter(text)[1] if text is not None else ""
@@ -95,6 +95,17 @@ def review_view(art: store.Article) -> dict:
                         "kept": {str(r.get("path")): r.get("kept")
                                  for r in (g.get("files") if isinstance(g.get("files"), list) else [])
                                  if isinstance(r, dict) and str(r.get("path") or "").startswith("assets/")}})
+    # everything that needs the person, in one order: the open findings and the changes whose check
+    # says the problem is still there, as the Review page's Needs you shows them (Codex RA5D-03)
+    queue = [(qm.queue_key(it.get("severity"), at(it)),
+              {"id": it["id"], "is": "finding", "type": it["type"], "severity": it.get("severity"),
+               "text": it.get("text")}) for it in needs]
+    queue += [(qm.queue_key(c["severity"], group_at(body, g) if body else None),
+               {"id": c["id"], "is": "change", "type": "half_done", "severity": c["severity"],
+                "text": "Changed, and the check says the problem is still there: "
+                        + "; ".join(t for t in c["texts"] if t)})
+              for g, c in zip(groups, changed) if c["half_done"]]
+    queue = [q for _, q in sorted(queue, key=lambda x: x[0])]
     from . import versions as V
 
     # the number the review recorded; a review from before it: the number only when one version
@@ -112,8 +123,8 @@ def review_view(art: store.Article) -> dict:
                        "reads_requested": last.get("reads_requested"), "picture_check": last.get("picture_check")},
             "state": "reviewed" if last.get("valid", True) else "failed",
             "score": qm.score(mine) if last.get("valid", True) else None,
-            "needs_you": needs, "changed": changed, "closed": closed,
-            "counts": {"needs_you": len(needs) + sum(1 for c in changed if c["half_done"]), "changed": len(changed),
+            "needs_you": needs, "queue": queue, "changed": changed, "closed": closed,
+            "counts": {"needs_you": len(queue), "changed": len(changed),
                        "closed": len(closed)}}
 
 

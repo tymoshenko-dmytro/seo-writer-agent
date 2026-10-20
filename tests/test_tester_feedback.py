@@ -69,20 +69,25 @@ def test_the_brief_the_writer_and_the_review_put_our_product_near_the_top(output
 LONG = "A " + "very " * 60 + "long title"
 
 
-@pytest.mark.parametrize("title,shown", [
+@pytest.mark.parametrize("title,url,shown", [
+    # the testers' caption: the site's name, by its initials, at atanet.org
     ("What is the Difference Between Translation and Interpreting? - American Translators Association",
-     "What is the Difference Between Translation and Interpreting?"),
-    ("Pricing plans | Acme", "Pricing plans"),
-    ("Home - Acme", "Home - Acme"),          # one word before the site's name: the whole title
-    # only the site's name goes: a clause after a dash stays (RA54-01)
-    ("Pricing plans - annual versus monthly | Acme", "Pricing plans - annual versus monthly"),
-    ("Pricing plans - annual versus monthly", "Pricing plans - annual versus monthly"),
-    (LONG, LONG),                            # never cut (RA54-01: no silent cut either)
+     "https://www.atanet.org/client-assistance/", "What is the Difference Between Translation and Interpreting?"),
+    ("Pricing plans | Acme", None, "Pricing plans"),
+    ("Pricing | Acme", None, "Pricing"),                         # RA5D-01: one word is a title too
+    ("Home - Acme", "https://acme.example/", "Home"),
+    ("Home - Acme", None, "Home - Acme"),                        # a dash with no site named: the words stay
+    ("Acme | Pricing plans", "https://acme.example/pricing", "Pricing plans"),     # the site's name first
+    # only the site's name goes: a clause after a dash stays (RA54-01, RA5D-01)
+    ("Pricing plans - annual versus monthly | Acme", None, "Pricing plans - annual versus monthly"),
+    ("Pricing plans - Annual Versus Monthly", "https://vendor.example/pricing", "Pricing plans - Annual Versus Monthly"),
+    ("Example Vendor Pricing - Example Vendor", "https://www.example-vendor.com/pricing", "Example Vendor Pricing"),
+    (LONG, None, LONG),                                          # never cut (RA54-01: no silent cut either)
 ])
-def test_a_page_title_caption_is_never_cut_with_an_ellipsis(title, shown):
+def test_a_page_title_caption_is_never_cut_with_an_ellipsis(title, url, shown):
     from core.agents.visual_director import page_title
 
-    assert page_title(title) == shown
+    assert page_title(title, url) == shown
 
 
 # ---- no picture made of text ------------------------------------------------------------------------

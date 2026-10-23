@@ -99,7 +99,7 @@ def test_an_earlier_check_that_cannot_be_read_asks_for_another(output_dir, case)
         _result(art, _body(SENTENCES[:5]), None, verdict="unknown")
     _edit(art, SENTENCES[:-1])
     row = _row(art)
-    assert row["state"] == "not_checked" and row["detail"].endswith("check it again"), row
+    assert row["state"] == "check_again" and row["again"] == "Check again", row
 
 
 def test_the_check_runs_again_from_its_row(studio, output_dir):
@@ -131,3 +131,18 @@ def test_only_removed_sentences_keep_a_good_result(output_dir):
     _edit(art, SENTENCES[:-3])
     row = _row(art)
     assert row["state"] == "clear" and row["detail"] == "v1 was checked: 99% unique. No sentence is new since", row
+
+
+def test_an_older_result_without_its_texts_hash_asks_for_another_check(output_dir):
+    from core import store
+
+    art = _article(output_dir, SENTENCES)
+    store.write_json(art.path("_plagiarism.json"), {"verdict": "ok", "uniqueness": 100})
+    row = _row(art)
+    assert row["state"] == "check_again" and "not checked for this one" not in row["detail"], row
+
+
+def test_never_checked_is_not_checked(output_dir):
+    art = _article(output_dir, SENTENCES)
+    row = _row(art)
+    assert row["state"] == "not_checked" and row["again"] == "Check the uniqueness", row

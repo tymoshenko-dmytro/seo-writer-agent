@@ -138,10 +138,10 @@ def _uniqueness_since(art: store.Article, uniq: dict, md: str) -> tuple[str, str
     from .plagiarism_report import DEFAULTS, since_check
 
     if uniq.get("uniqueness") is None:
-        return "not_checked", "an earlier version of the text was sent to the check, which gave no result: check it again"
+        return "check_again", "the check of an earlier version gave no result"
     s = since_check(art, uniq, md)
     if s is None:
-        return "not_checked", "checked on an earlier version of the text that is no longer kept: check it again"
+        return "check_again", "an earlier version was checked, and the Studio no longer keeps it to compare"
     warn = int((uniq.get("thresholds") or {}).get("warn_below") or DEFAULTS["warn_below"])
     head = f"v{s['n']} was checked: {uniq.get('uniqueness')}% unique."
     since = f"{s['new']}% of the text is new since" if s["new"] else "No sentence is new since"
@@ -200,7 +200,7 @@ def pre_send_checks(art: store.Article) -> list[dict]:
         # (operator, 2026-10-23: "not checked" after every edit alarmed people)
         sha = uniq.get("text_sha")
         if not sha:
-            state, detail = "not_checked", "a uniqueness result from before results recorded their text: not checked for this one"
+            state, detail = "check_again", "an older result that does not say which version of the text it read"
         elif sha != text_sha(md):
             state, detail = _uniqueness_since(art, uniq, md)
         elif uniq.get("verdict") in ("warn", "fail"):

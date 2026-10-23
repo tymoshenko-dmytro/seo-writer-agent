@@ -17,6 +17,8 @@ frontmatter are not. Sending raw Markdown would have URLs and syntax counted as 
 """
 from __future__ import annotations
 
+import hashlib
+import re
 from pathlib import Path
 
 from .keyword_report import split_zones
@@ -172,6 +174,57 @@ def text_sha(markdown: str) -> str:
     return hashlib.sha256(article_text(markdown).encode("utf-8")).hexdigest()[:16]
 
 
+# ---- a result after the text moved ----------------------------------------------------
+_SENTENCE = re.compile(r"(?<=[.!?])\s+|\n+")
+
+
+def _sentences(prose: str) -> list[str]:
+    return [t for t in (" ".join(x.split()) for x in _SENTENCE.split(prose or "")) if t]
+
+
+def _checked_text(art, result: dict) -> tuple[int | None, str] | None:
+    """(its version number, its Markdown) of the text the check behind `result` read: the version
+    the result names, else the newest kept version whose prose has the result's hash."""
+    from . import versions
+
+    sha = result.get("text_sha")
+    if not sha:
+        return None
+    named = result.get("version_n")
+    order = sorted(versions.index(art), key=lambda v: (v.get("n") != named, -int(v.get("n") or 0)))
+    for v in order:
+        try:
+            md = versions.text_of(art, v["n"])
+        except (KeyError, ValueError):          # not kept, or its kept bytes are damaged
+            continue
+        if text_sha(md) == sha:
+            return v["n"], md
+    return None
+
+
+def since_check(art, result: dict, markdown: str) -> dict | None:
+    """What changed since the check behind `result`, for a text that moved after it (operator,
+    2026-10-23: "not checked" after every edit alarmed people): {"n": the version it read,
+    "new": the share of the prose now that is new or rewritten (a sentence the checked text does
+    not have word for word), "lowest": the lowest uniqueness the prose now can have, were every
+    new word found elsewhere and every match the check found still in place}. None when the text
+    it read is not among the kept versions."""
+    got = _checked_text(art, result)
+    u = result.get("uniqueness")
+    if got is None or u is None:
+        return None
+    n, checked = got
+    old, now = _sentences(article_text(checked)), _sentences(article_text(markdown))
+    seen = {t.lower() for t in old}
+    total = sum(len(t.split()) for t in now)
+    kept = sum(len(t.split()) for t in now if t.lower() in seen)
+    if not total:
+        return None
+    matched_before = (100 - float(u)) / 100 * sum(len(t.split()) for t in old)
+    lowest = 100 * (1 - (min(kept, matched_before) + (total - kept)) / total)
+    return {"n": n, "new": round(100 * (total - kept) / total), "lowest": max(0, int(lowest))}
+
+
 def write_report(article_dir, data: dict, topic: str = "") -> None:
     from .store import atomic_write_text, write_json
 
@@ -193,6 +246,13 @@ def build(article_dir, seo: dict | None = None, dry_run: bool = False,
     data = analyse(md, settings_from(seo), dry_run=dry_run)
     data["slug"] = d.name
     data["text_sha"] = text_sha(md)     # the scorecard marks the result stale once the text moves
+    # the version it read, so a later page can say what changed since (since_check)
+    if src.name == "article.md":
+        from . import versions
+
+        raw = hashlib.sha256(src.read_bytes()).hexdigest()
+        data["version_n"] = next((v["n"] for v in reversed(versions.index(Article(d.parent, d.name)))
+                                  if (v.get("files") or {}).get("article.md") == raw), None)
     if write and not dry_run:
         write_report(d, data, topic)
     return data

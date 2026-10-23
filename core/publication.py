@@ -131,9 +131,32 @@ def send_options(pub: dict | None) -> list[tuple[str, str]]:
     return [("draft", f"Update the draft #{pid}"), ("publish", f"Publish draft #{pid} on the blog")]
 
 
+def _uniqueness_since(art: store.Article, uniq: dict, md: str) -> tuple[str, str]:
+    """The uniqueness row for a result of an earlier version: what that version scored, how much
+    of the text is new or rewritten since, and whether that much new text could bring it under
+    the warn line (plagiarism_report.since_check)."""
+    from .plagiarism_report import DEFAULTS, since_check
+
+    if uniq.get("uniqueness") is None:
+        return "not_checked", "an earlier version of the text was sent to the check, which gave no result: check it again"
+    s = since_check(art, uniq, md)
+    if s is None:
+        return "not_checked", "checked on an earlier version of the text that is no longer kept: check it again"
+    warn = int((uniq.get("thresholds") or {}).get("warn_below") or DEFAULTS["warn_below"])
+    head = f"v{s['n']} was checked: {uniq.get('uniqueness')}% unique."
+    since = f"{s['new']}% of the text is new since" if s["new"] else "No sentence is new since"
+    if uniq.get("verdict") in ("warn", "fail"):
+        return "found", f"v{s['n']} was checked: {uniq.get('uniqueness')}% unique ({uniq['verdict']}). {since}: check it again"
+    if uniq.get("verdict") == "ok" and s["lowest"] >= warn:
+        return "clear", (f"{head} {since}" + (f"; even if all of it were copied, it stays {s['lowest']}% unique or more"
+                                              if s["new"] else ""))
+    return "check_again", f"{head} {since}: if it were copied, the text could fall under {warn}% unique"
+
+
 def pre_send_checks(art: store.Article) -> list[dict]:
     """What the checks say before a send, each as what it is: {"check", "state", "detail"} with
-    state "found", "clear", "not_checked" or "failed" (a check that could not run is never a pass)."""
+    state "found", "clear", "not_checked", "check_again" (a result of an earlier version that the
+    edits since may have moved) or "failed" (a check that could not run is never a pass)."""
     from .validators import analyze_structure, meta_commentary
 
     out = []
@@ -162,25 +185,31 @@ def pre_send_checks(art: store.Article) -> list[dict]:
     out.append({"check": "writing-process sentences", "state": "found" if mc else "clear",
                 "detail": f"a sentence that may describe how the article was written: «{mc[0][:160]}»" if mc
                 else "no sentence about how the article was written"})
-    uniq = store.read_json_lenient(art.path("_plagiarism.json"), {}) or {}
-    if not uniq:
-        out.append({"check": "uniqueness", "state": "not_checked", "detail": "uniqueness not checked"})
-    else:
-        from .plagiarism_report import text_sha
+    from .plagiarism_report import article_text, text_sha
+    from .tools.plagiarism import estimate_credits
 
-        # clear only for a result of this text that says it is unique (review R638-06)
+    uniq = store.read_json_lenient(art.path("_plagiarism.json"), {}) or {}
+    # the check runs again from its own row, at its price (operator, 2026-10-23)
+    again = {"again": "Check again" if uniq else "Check the uniqueness",
+             "again_cost": f"about {estimate_credits(article_text(md)):,} Winston credits"}
+    if not uniq:
+        out.append({"check": "uniqueness", "state": "not_checked", "detail": "uniqueness not checked", **again})
+    else:
+        # clear only for a result of this text that says it is unique (review R638-06), or for a
+        # result of an earlier version when the text since cannot bring it under the warn line
+        # (operator, 2026-10-23: "not checked" after every edit alarmed people)
         sha = uniq.get("text_sha")
         if not sha:
             state, detail = "not_checked", "a uniqueness result from before results recorded their text: not checked for this one"
         elif sha != text_sha(md):
-            state, detail = "not_checked", "checked on an earlier version of the text: not checked for this one"
+            state, detail = _uniqueness_since(art, uniq, md)
         elif uniq.get("verdict") in ("warn", "fail"):
             state, detail = "found", f"{uniq.get('uniqueness')}% unique ({uniq.get('verdict')})"
         elif uniq.get("verdict") == "ok" and uniq.get("uniqueness") is not None:
             state, detail = "clear", f"{uniq.get('uniqueness')}% unique"
         else:
             state, detail = "failed", "the uniqueness check gave no result for this text"
-        out.append({"check": "uniqueness", "state": state, "detail": detail})
+        out.append({"check": "uniqueness", "state": state, "detail": detail, **again})
     missing = [p for p, h in art.pictures().items() if h is None]
     out.append({"check": "pictures", "state": "found" if missing else "clear",
                 "detail": ("missing on disk: " + ", ".join(missing[:5])) if missing

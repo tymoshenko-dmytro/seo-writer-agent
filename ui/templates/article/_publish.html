@@ -1,12 +1,13 @@
 {#- Publish: what the checks say before a send (each as what it is: found, clear, not checked,
     could not run; none blocks a send), the sends at full size, each confirmed in a dialog that
-    names the post, and the log of sends. The uniqueness check sits at the bottom. -#}
-{% set words = {"found": ("found", "yellow", False), "clear": ("clear", "green", True), "not_checked": ("not checked", "gray", True), "failed": ("could not run", "red", False)} %}
+    names the post, and the log of sends. The uniqueness check runs again from its own row. -#}
+{% set words = {"found": ("found", "yellow", False), "clear": ("clear", "green", True), "not_checked": ("not checked", "gray", True), "check_again": ("check again", "gray", True), "failed": ("could not run", "red", False)} %}
 <section class="panel">
   <div class="panel-head"><h2 class="panel-title">Before a send</h2><span class="hint panel-aside">what the checks say about this version; nothing here blocks a send</span></div>
   <ul class="checks">
     {% for c in checks %}{% set w = words.get(c.state, (c.state, "gray", True)) %}
-    <li><span class="label">{{ c.check[0]|upper ~ c.check[1:] }}</span><span class="hint">{{ c.detail }}</span>{{ ui.status(w[0], w[1], quiet=w[2]) }}</li>
+    <li><span class="label">{{ c.check[0]|upper ~ c.check[1:] }}</span><span><span class="hint">{{ c.detail }}</span>
+      {%- if c.again %}<form method="post" action="{{ base }}/uniqueness" class="inline">{{ ui.text_action(c.again, cost=c.again_cost) }}</form>{% endif %}</span>{{ ui.status(w[0], w[1], quiet=w[2]) }}</li>
     {% endfor %}
   </ul>
 </section>
@@ -23,7 +24,7 @@
   </div>
 </section>
 {% set found = checks|selectattr("state", "equalto", "found")|list|length %}
-{% set unchecked = checks|selectattr("state", "equalto", "not_checked")|list|length %}
+{% set unchecked = checks|selectattr("state", "in", ["not_checked", "check_again"])|list|length %}
 {% set failed = checks|selectattr("state", "equalto", "failed")|list|length %}
 {% for action, label in options %}
 {% call ui.dialog("send-" ~ action, label ~ "?", text=("The checks above: " ~ found ~ " found, " ~ unchecked ~ " not checked, " ~ failed ~ " could not run. ") ~ ("People read this post now." if rail.post.live else "")) %}
@@ -43,6 +44,3 @@
   </ul>
   {% else %}<div class="panel-body"><p class="hint">Nothing sent from the Studio yet.</p></div>{% endif %}
 </section>
-<div class="section-foot">
-  <form method="post" action="{{ base }}/uniqueness" class="inline">{{ ui.text_action("Check the uniqueness", cost="Winston credits, about 2 a word") }}</form>
-</div>

@@ -178,25 +178,48 @@ def text_sha(markdown: str) -> str:
 
 # ---- a result after the text moved ----------------------------------------------------
 # a word as the check may count it: the longest count splits at every non-letter and gives each
-# CJK character its own word; the shortest counts each space-separated token with a letter
-# (Codex R11F-01: the check's own units are not ours, so the bound holds for any of them between)
+# CJK character its own word; the shortest counts each space-separated token with a letter or a
+# digit (Codex R11F-01: the check's own units are not ours, so the bound holds for any of them
+# between, and is given only when the check's count of the checked text lies between: R8B9-01)
 _CJK = "\u3040-\u30ff\u3400-\u9fff\uac00-\ud7af\uf900-\ufaff"
 _FINE = re.compile(rf"[{_CJK}]|[^\W{_CJK}]+")
 
 
+def _signs(text: str) -> int:
+    """Tokens of signs alone ("—", "---"): a check may count each as a word."""
+    return sum(1 for w in text.split() if not re.search(r"\w", w))
+
+
 def _most_words(text: str) -> int:
-    return len(_FINE.findall(text))
+    return len(_FINE.findall(text)) + _signs(text)
 
 
 def _least_words(text: str) -> int:
     return sum(1 for w in text.split() if re.search(r"\w", w))
 
 
+# the scripts that put spaces between words, where the two counts above bound any count of a
+# word: a text in another (Thai, Lao, Khmer, Myanmar, Tibetan...) gets no bound (Codex R8B9-01)
+_SPACED = ("LATIN", "CYRILLIC", "GREEK", "ARMENIAN", "GEORGIAN", "HEBREW", "ARABIC", "DEVANAGARI",
+           "BENGALI", "GURMUKHI", "GUJARATI", "TAMIL", "TELUGU", "KANNADA", "MALAYALAM", "HANGUL")
+
+
+def _spaced(text: str) -> bool:
+    import unicodedata
+
+    for ch in set(text):
+        if ch.isalpha() and not re.match(rf"[{_CJK}]", ch):
+            if not unicodedata.name(ch, "").startswith(_SPACED):
+                return False
+    return True
+
+
 def _units(markdown: str) -> list[str]:
     """The text's sentences as a reader sees them: the title, each heading, each sentence of a
     paragraph with its soft line breaks joined, each list item and table cell (keyword_report's
-    units, on the prose the check reads: Codex R11F-02)."""
-    z = split_zones(markdown)
+    units, on the prose the check reads: Codex R11F-02); a quote's lines are one paragraph, as the
+    page's parser reads them (R8B9-02)."""
+    z = split_zones(re.sub(r"^[ \t]*(?:>[ \t]?)+", "", markdown or "", flags=re.M))
     raw = [z["h1"]] + [t for _, t in z["headings"]] + list(z["body_units"])
     return [t for t in (" ".join(str(x).split()) for x in raw) if t]
 
@@ -250,6 +273,16 @@ def since_check(art, result: dict, markdown: str) -> dict | None:
             new += _most_words(t)
     if not kept + new:
         return {"n": n, "empty": True}
+    # the prose the check reads holds signs the sentences leave out (a table's "---"): the ones
+    # the text gained count as new words
+    old_prose, now_prose = article_text(checked), article_text(markdown)
+    new += max(0, _signs(now_prose) - _signs(old_prose))
+    # a bound only where our counts bound the check's own: every word in a spaced script, and the
+    # check's count of the prose it read between ours (Codex R8B9-01); else no promise
+    tw = result.get("total_words")
+    if not _spaced(old_prose + now_prose) or (
+            isinstance(tw, (int, float)) and not _least_words(old_prose) <= tw <= _most_words(old_prose)):
+        return {"n": n, "new_words": new, "new": 100 * new / (kept + new)}
     # the matches the check found, in its own words when it kept the count, else from its
     # percentage at the safe end of its rounding, over the most words the old text can have
     pw = result.get("plagiarised_words")

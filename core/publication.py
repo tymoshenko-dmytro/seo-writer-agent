@@ -152,9 +152,11 @@ def _uniqueness_since(art: store.Article, uniq: dict, md: str) -> tuple[str, str
              "Under 1% of the text is new since" if s["new"] < 1 else f"{round(s['new'])}% of the text is new since")
     if uniq.get("verdict") in ("warn", "fail"):
         return "found", f"{what} was checked: {uniq.get('uniqueness')}% unique ({uniq['verdict']}). {since}: check it again"
-    if uniq.get("verdict") == "ok" and s["lowest"] >= warn:
+    if uniq.get("verdict") == "ok" and s.get("lowest") is not None and s["lowest"] >= warn:
         return "clear", (f"{head} {since}" + (f"; even if all of it were copied, it stays {s['lowest']}% unique or more"
                                               if s["new_words"] else ""))
+    if s.get("lowest") is None:
+        return "check_again", f"{head} {since}: the Studio cannot tell how far that can move the result"
     return "check_again", f"{head} {since}: if it were copied, the text could fall under {warn}% unique"
 
 

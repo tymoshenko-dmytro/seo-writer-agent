@@ -156,7 +156,7 @@ def test_never_checked_is_not_checked(output_dir):
 def test_a_word_is_counted_at_its_most_when_new_and_at_its_least_when_kept():
     from core import plagiarism_report as pr
 
-    assert pr._most_words("alpha/beta/gamma don't 3.5 — 東京") == 9          # 3 + 2 + 2 + 2
+    assert pr._most_words("alpha/beta/gamma don't 3.5 — 東京") == 10         # 3 + 2 + 2 + 1 + 2
     assert pr._least_words("alpha/beta/gamma don't 3.5 — 東京") == 4
 
 

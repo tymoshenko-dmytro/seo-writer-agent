@@ -98,7 +98,8 @@ def uniqueness(slug):
                 usage.stage("uniqueness"):
             from core import versions
 
-            versions.ensure(art)                # the text it reads is a version it can name (R9D2-04)
+            if art.path("article.md").is_file():
+                versions.ensure(art)            # the text it reads is a version it can name (R9D2-04)
             cb("sending the text to Winston")
             data = build_uniqueness(art.dir, project().seo)
         rewrite = len([p for p in (data.get("passages") or []) if not p.get("cited")])

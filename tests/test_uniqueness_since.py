@@ -54,10 +54,12 @@ def test_the_lowest_uniqueness_bound(monkeypatch):
     new = _body(SENTENCES[:-2] + ["A brand new sentence about widgets and their teams today."] * 2)
     monkeypatch.setattr(pr, "_checked_text", lambda art, result: (1, old))     # the text the check read
     s = pr.since_check(None, {"text_sha": "x", "uniqueness": 96}, new)
-    total = sum(len(t.split()) for t in pr._sentences(pr.article_text(new)))
-    new_words = 2 * len("A brand new sentence about widgets and their teams today.".split())
+    added = "A brand new sentence about widgets and their teams today."
+    kept = sum(pr._least_words(t) for t in pr._units(new) if t != added)
+    new_words = 2 * pr._most_words(added)             # two copies, neither in the checked text
+    total = kept + new_words
     # 96% shown with two decimals: at most 4.005% of the checked words matched, rounded up
-    matched = math.ceil(0.04005 * sum(len(t.split()) for t in pr._sentences(pr.article_text(old))))
+    matched = math.ceil(0.04005 * sum(pr._most_words(t) for t in pr._units(old)))
     assert s["n"] == 1 and s["new_words"] == new_words and s["new"] == pytest.approx(100 * new_words / total)
     assert s["lowest"] == math.floor(100 * (1 - (matched + new_words) / total))
 
@@ -149,3 +151,26 @@ def test_never_checked_is_not_checked(output_dir):
     art = _article(output_dir, SENTENCES)
     row = _row(art)
     assert row["state"] == "not_checked" and row["again"] == "Check the uniqueness", row
+
+
+def test_a_word_is_counted_at_its_most_when_new_and_at_its_least_when_kept():
+    from core import plagiarism_report as pr
+
+    assert pr._most_words("alpha/beta/gamma don't 3.5 — 東京") == 9          # 3 + 2 + 2 + 2
+    assert pr._least_words("alpha/beta/gamma don't 3.5 — 東京") == 4
+
+
+def test_a_checked_draft_is_compared_with_the_article_it_became(output_dir, monkeypatch):
+    """A draft is no version: its result keeps the text it read, and the article is compared
+    with that (Codex R11F-03)."""
+    from core import plagiarism_report as pr, store
+
+    art = store.Repository(output_dir).reserve("widget-guide")
+    store.atomic_write_text(art.path("04_draft.md"), _body(SENTENCES))
+    monkeypatch.setattr(pr, "analyse", lambda md, cfg=None, dry_run=False: {
+        "uniqueness": 99, "verdict": "ok", "sources": [], "passages": [], "plagiarised_words": 3,
+        "thresholds": {"warn_below": 90, "fail_below": 80, "min_passage_words": 8}})
+    store.write_json(art.path("_plagiarism.json"), pr.build(art.dir, write=False))
+    art.write_article("title: Widget guide\nslug: widget-guide\n", _body(SENTENCES[:-1] + ["One new closing sentence."]))
+    row = _row(art)
+    assert row["state"] == "clear" and row["detail"].startswith("An earlier text was checked: 99% unique."), row

@@ -177,16 +177,34 @@ def text_sha(markdown: str) -> str:
 
 
 # ---- a result after the text moved ----------------------------------------------------
-_SENTENCE = re.compile(r"(?<=[.!?])\s+|\n+")
+# a word as the check may count it: the longest count splits at every non-letter and gives each
+# CJK character its own word; the shortest counts each space-separated token with a letter
+# (Codex R11F-01: the check's own units are not ours, so the bound holds for any of them between)
+_CJK = "\u3040-\u30ff\u3400-\u9fff\uac00-\ud7af\uf900-\ufaff"
+_FINE = re.compile(rf"[{_CJK}]|[^\W{_CJK}]+")
 
 
-def _sentences(prose: str) -> list[str]:
-    return [t for t in (" ".join(x.split()) for x in _SENTENCE.split(prose or "")) if t]
+def _most_words(text: str) -> int:
+    return len(_FINE.findall(text))
+
+
+def _least_words(text: str) -> int:
+    return sum(1 for w in text.split() if re.search(r"\w", w))
+
+
+def _units(markdown: str) -> list[str]:
+    """The text's sentences as a reader sees them: the title, each heading, each sentence of a
+    paragraph with its soft line breaks joined, each list item and table cell (keyword_report's
+    units, on the prose the check reads: Codex R11F-02)."""
+    z = split_zones(markdown)
+    raw = [z["h1"]] + [t for _, t in z["headings"]] + list(z["body_units"])
+    return [t for t in (" ".join(str(x).split()) for x in raw) if t]
 
 
 def _checked_text(art, result: dict) -> tuple[int | None, str] | None:
     """(its version number, its Markdown) of the text the check behind `result` read: the version
-    the result names, else the newest kept version whose prose has the result's hash."""
+    the result names, else the newest kept version whose prose has the result's hash, else the
+    text the result kept itself (a draft that was no version: Codex R11F-03)."""
     from . import versions
 
     sha = result.get("text_sha")
@@ -201,46 +219,44 @@ def _checked_text(art, result: dict) -> tuple[int | None, str] | None:
             continue
         if text_sha(md) == sha:
             return v["n"], md
+    own = result.get("checked_markdown")
+    if isinstance(own, str) and text_sha(own) == sha:
+        return None, own
     return None
-
-
-def _matched_before(result: dict, old_words: int) -> float:
-    """The most words of the checked text the check can have matched, in this module's words: its
-    own counts when it kept them (the larger of its count and its share of our count), else its
-    percentage at the safe end of the rounding it was shown with (Codex R9D2-02)."""
-    tw, pw = result.get("total_words"), result.get("plagiarised_words")
-    if isinstance(tw, (int, float)) and tw > 0 and isinstance(pw, (int, float)) and pw >= 0:
-        return max(float(pw), math.ceil(pw * old_words / tw))
-    return math.ceil((100 - float(result["uniqueness"]) + 0.005) / 100 * old_words)
 
 
 def since_check(art, result: dict, markdown: str) -> dict | None:
     """What changed since the check behind `result`, for a text that moved after it (operator,
-    2026-10-23: "not checked" after every edit alarmed people): {"n": the version it read,
-    "new_words" and "new" (their share, in %): the words of the prose now that the checked text
-    does not hold (a sentence it does not have word for word, or one more copy of a sentence than
-    it had: Codex R9D2-01), "lowest": the lowest uniqueness the prose now can have, were every
-    new word found elsewhere and every match the check found still in place}. None when the text
-    it read is not among the kept versions."""
+    2026-10-23: "not checked" after every edit alarmed people): {"n": the version it read (None
+    for a draft the result kept), "new_words" and "new" (their share, in %): the words of the
+    prose now that the checked text does not hold (a sentence it does not have word for word, or
+    one more copy of a sentence than it had: Codex R9D2-01), "lowest": the lowest uniqueness the
+    prose now can have, were every new word found elsewhere and every match the check found
+    still in place}; {"n", "empty": True} when the text now has no prose to compare (R11F-04).
+    None when the text it read cannot be found. The new words are counted at their most and the
+    kept ones at their least, so the bound holds whatever the check calls a word (R11F-01)."""
     got = _checked_text(art, result)
     if got is None or result.get("uniqueness") is None:
         return None
     n, checked = got
-    old, now = _sentences(article_text(checked)), _sentences(article_text(markdown))
+    old, now = _units(checked), _units(markdown)
     left = Counter(t.lower() for t in old)
-    total = kept = 0
+    kept = new = 0
     for t in now:
-        w = len(t.split())
-        total += w
         if left[t.lower()] > 0:
             left[t.lower()] -= 1
-            kept += w
-    if not total:
-        return None
-    new = total - kept
-    matched = _matched_before(result, sum(len(t.split()) for t in old))
-    lowest = 100 * (1 - (min(kept, matched) + new) / total)
-    return {"n": n, "new_words": new, "new": 100 * new / total, "lowest": max(0, math.floor(lowest))}
+            kept += _least_words(t)
+        else:
+            new += _most_words(t)
+    if not kept + new:
+        return {"n": n, "empty": True}
+    # the matches the check found, in its own words when it kept the count, else from its
+    # percentage at the safe end of its rounding, over the most words the old text can have
+    pw = result.get("plagiarised_words")
+    matched = (float(pw) if isinstance(pw, (int, float)) and pw >= 0 else
+               math.ceil((100 - float(result["uniqueness"]) + 0.005) / 100 * sum(_most_words(t) for t in old)))
+    lowest = 100 * (1 - (min(kept, matched) + new) / (kept + new))
+    return {"n": n, "new_words": new, "new": 100 * new / (kept + new), "lowest": max(0, math.floor(lowest))}
 
 
 def bind_version(art, n: int) -> None:
@@ -283,6 +299,8 @@ def build(article_dir, seo: dict | None = None, dry_run: bool = False,
         raw = hashlib.sha256(src.read_bytes()).hexdigest()
         data["version_n"] = next((v["n"] for v in reversed(versions.index(Article(d.parent, d.name)))
                                   if (v.get("files") or {}).get("article.md") == raw), None)
+    if data.get("version_n") is None and not dry_run:
+        data["checked_markdown"] = md   # a text no version holds (a draft): kept to compare later
     if write and not dry_run:
         write_report(d, data, topic)
     return data

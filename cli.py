@@ -883,10 +883,12 @@ def main():
         try:
             with art.lock(holder="uniqueness check (CLI)"), usage.recording(d, "uniqueness", config=cfg), \
                     usage.stage("uniqueness"):
-                if not args.dry_run:
+                if not args.dry_run and art.path("article.md").is_file():
                     from core import versions
 
-                    versions.ensure(art)        # the text it reads is a version it can name (R9D2-04)
+                    # the text it reads is a version it can name (R9D2-04); a draft is no version,
+                    # and the result keeps it instead (R11F-03)
+                    versions.ensure(art)
                 data = build(d, project.seo, dry_run=args.dry_run)
         except PlagiarismError as e:
             if args.json:

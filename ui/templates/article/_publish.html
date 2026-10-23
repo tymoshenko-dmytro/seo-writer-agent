@@ -6,8 +6,9 @@
   <div class="panel-head"><h2 class="panel-title">Before a send</h2><span class="hint panel-aside">what the checks say about this version; nothing here blocks a send</span></div>
   <ul class="checks">
     {% for c in checks %}{% set w = words.get(c.state, (c.state, "gray", True)) %}
-    <li><span class="label">{{ c.check[0]|upper ~ c.check[1:] }}</span><span><span class="hint">{{ c.detail }}</span>
-      {%- if c.again %}<form method="post" action="{{ base }}/uniqueness" class="inline">{{ ui.text_action(c.again, cost=c.again_cost) }}</form>{% endif %}</span>{{ ui.status(w[0], w[1], quiet=w[2]) }}</li>
+    <li><span class="label">{{ c.check[0]|upper ~ c.check[1:] }}</span>
+      {%- if c.again %}<span><span class="hint">{{ c.detail }}</span><form method="post" action="{{ base }}/uniqueness" class="inline">{{ ui.text_action(c.again, cost=c.again_cost) }}</form></span>
+      {%- else %}<span class="hint">{{ c.detail }}</span>{% endif %}{{ ui.status(w[0], w[1], quiet=w[2]) }}</li>
     {% endfor %}
   </ul>
 </section>

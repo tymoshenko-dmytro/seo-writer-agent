@@ -1,9 +1,8 @@
 """The uniqueness row after an edit (operator, 2026-10-23): "not checked" after every edit alarmed
-people. The row says which version was checked, how much of the text is new or rewritten since,
-and whether that much could bring it under the warn line; the check runs again from the row."""
+people. The row says which version was checked, what it scored and how much of the text changed
+since; under 5% new and under 5% gone after a good result it stays clear, else it asks to check
+again (a rule of thumb the operator chose over a proof); the check runs again from the row."""
 from __future__ import annotations
-
-import math
 
 import pytest
 
@@ -46,33 +45,29 @@ def _row(art):
     return next(c for c in publication.pre_send_checks(art) if c["check"] == "uniqueness")
 
 
-def test_the_lowest_uniqueness_bound(monkeypatch):
-    """Kept sentences carry at most the matches the check found; every new word may be matched."""
+def test_the_share_of_the_text_that_changed(monkeypatch):
+    """New: the letters of sentences the checked text lacks (a second copy too), of the text now;
+    gone: the letters of checked sentences the text no longer has, of the checked text."""
     from core import plagiarism_report as pr
 
-    old = _body(SENTENCES)
-    new = _body(SENTENCES[:-2] + ["A brand new sentence about widgets and their teams today."] * 2)
+    added = "A brand new sentence about widgets and their teams today."
+    old, new = _body(SENTENCES), _body(SENTENCES[:-2] + [added] * 2)
     monkeypatch.setattr(pr, "_checked_text", lambda art, result: (1, old))     # the text the check read
     s = pr.since_check(None, {"text_sha": "x", "uniqueness": 96}, new)
-    added = "A brand new sentence about widgets and their teams today."
-    kept = sum(pr._least_words(t) for t in pr._units(new) if t != added)
-    new_words = 2 * pr._most_words(added)             # two copies, neither in the checked text
-    total = kept + new_words
-    # 96% shown with two decimals: at most 4.005% of the checked words matched, rounded up
-    matched = math.ceil(0.04005 * sum(pr._most_words(t) for t in pr._units(old)))
-    assert s["n"] == 1 and s["new_words"] == new_words and s["new"] == pytest.approx(100 * new_words / total)
-    assert s["lowest"] == math.floor(100 * (1 - (matched + new_words) / total))
+    size = lambda t: len(t.replace(" ", ""))                                   # noqa: E731
+    assert s["n"] == 1 and s["new_words"] == 2 * len(added.split()) and s["gone_words"] == sum(len(t.split()) for t in SENTENCES[-2:])
+    assert s["new"] == pytest.approx(100 * 2 * size(added) / sum(map(size, pr._units(new))))
+    assert s["gone"] == pytest.approx(100 * sum(map(size, SENTENCES[-2:])) / sum(map(size, pr._units(old))))
 
 
 def test_a_small_edit_after_a_good_check_stays_clear(output_dir):
-    """The edit cannot bring the text under the warn line: clear, saying so."""
+    """Under 5% changed after a good result: clear, with the numbers."""
     art = _article(output_dir, SENTENCES)
     _result(art, art.text(), 99)
     _edit(art, SENTENCES[:-1] + ["Sentence number 40 now explains the last detail in other words."])
     row = _row(art)
     assert row["state"] == "clear", row
-    assert row["detail"] == ("v1 was checked: 99% unique. 2% of the text is new since; even if all of it were "
-                             "copied, it stays 96% unique or more")
+    assert row["detail"] == "v1 was checked: 99% unique. 2% of the text is new and 2% of the checked text is gone since"
     assert row["again"] == "Check again" and "Winston credits" in row["again_cost"]
 
 
@@ -82,7 +77,7 @@ def test_a_large_rewrite_asks_for_another_check(studio, output_dir):
     _edit(art, SENTENCES[:20] + [f"A rewritten sentence {i} with other words about widgets." for i in range(20)])
     row = _row(art)
     assert row["state"] == "check_again", row
-    assert row["detail"] == "v1 was checked: 96% unique. 44% of the text is new since: if it were copied, the text could fall under 90% unique"
+    assert row["detail"].startswith("v1 was checked: 96% unique. ") and "of the text is new and" in row["detail"]
     page = studio.get(f"/a/{art.slug}?tab=publish").get_data(as_text=True)
     assert "check again" in page.split(">Uniqueness<", 1)[1].split("</li>", 1)[0] and "not checked for this one" not in page
 
@@ -92,7 +87,7 @@ def test_a_warning_on_an_earlier_version_stays_found(output_dir):
     _result(art, art.text(), 82, verdict="warn")
     _edit(art, SENTENCES[:-1])
     row = _row(art)
-    assert row["state"] == "found" and row["detail"] == "v1 was checked: 82% unique (warn). No sentence is new since: check it again"
+    assert row["state"] == "found" and row["detail"] == "v1 was checked: 82% unique (warn). No sentence is new since; 2% of the checked text is gone"
 
 
 @pytest.mark.parametrize("case", ["not kept", "no result"])
@@ -130,10 +125,21 @@ def test_a_check_records_the_version_it_read(output_dir, monkeypatch):
     assert pr.build(art.dir)["version_n"] == 2
 
 
-def test_only_removed_sentences_keep_a_good_result(output_dir):
+@pytest.mark.parametrize("removed,state", [(1, "clear"), (3, "check_again")])
+def test_removed_sentences_count_too(output_dir, removed, state):
+    """Removing unique text raises the share of what matched elsewhere: 5% gone asks again."""
     art = _article(output_dir, SENTENCES)
     _result(art, art.text(), 99)
-    _edit(art, SENTENCES[:-3])
+    _edit(art, SENTENCES[:-removed])
+    row = _row(art)
+    assert row["state"] == state and row["detail"].startswith("v1 was checked: 99% unique. No sentence is new since; "), row
+
+
+def test_nothing_changed_in_the_prose(output_dir):
+    """A change outside the prose (the frontmatter): the text the check read is still there."""
+    art = _article(output_dir, SENTENCES)
+    _result(art, art.text(), 99)
+    _edit(art, list(reversed(SENTENCES)))
     row = _row(art)
     assert row["state"] == "clear" and row["detail"] == "v1 was checked: 99% unique. No sentence is new since", row
 
@@ -153,11 +159,14 @@ def test_never_checked_is_not_checked(output_dir):
     assert row["state"] == "not_checked" and row["again"] == "Check the uniqueness", row
 
 
-def test_a_word_is_counted_at_its_most_when_new_and_at_its_least_when_kept():
+def test_a_script_without_spaces_counts_in_full(monkeypatch):
+    """The share is of letters: ten Thai words with no spaces are not one word."""
     from core import plagiarism_report as pr
 
-    assert pr._most_words("alpha/beta/gamma don't 3.5 — 東京") == 10         # 3 + 2 + 2 + 1 + 2
-    assert pr._least_words("alpha/beta/gamma don't 3.5 — 東京") == 4
+    old = _body(SENTENCES)
+    monkeypatch.setattr(pr, "_checked_text", lambda art, result: (1, old))
+    s = pr.since_check(None, {"text_sha": "x", "uniqueness": 99}, _body(SENTENCES + ["สวัสดีครับยินดีต้อนรับสู่บทความของเราวันนี้" * 3]))
+    assert s["new"] > 5, s
 
 
 def test_a_checked_draft_is_compared_with_the_article_it_became(output_dir, monkeypatch):
@@ -174,3 +183,27 @@ def test_a_checked_draft_is_compared_with_the_article_it_became(output_dir, monk
     art.write_article("title: Widget guide\nslug: widget-guide\n", _body(SENTENCES[:-1] + ["One new closing sentence."]))
     row = _row(art)
     assert row["state"] == "clear" and row["detail"].startswith("An earlier text was checked: 99% unique."), row
+
+
+@pytest.mark.parametrize("old,new,changed", [
+    # a quote's lines reflowed, emphasis kept: the same sentences (Codex R8B9-02, R45C-01)
+    ("> *Every local widget team should*\n> *review the settings before deployment.*",
+     "> *Every local widget team should review the settings before deployment.*", False),
+    # a quote's halves swapped between its sentences: both are new
+    ("> Every local widget team should\n> review the settings before deployment.\n> All new project owners must\n"
+     "> compare the prices before renewal.",
+     "> Every local widget team should\n> compare the prices before renewal.\n> All new project owners must\n"
+     "> review the settings before deployment.", True),
+    # the parts after a colon or a semicolon swapped: the sentence is new (R45C-04)
+    ("Teams should check two things: the settings before deployment; the prices before renewal.",
+     "Teams should check two things: the prices before renewal; the settings before deployment.", True),
+    # a table's rows reordered: the same cells
+    ("| Advice |\n|---|\n| Review the settings first. |\n| Compare the prices next. |",
+     "| Advice |\n|---|\n| Compare the prices next. |\n| Review the settings first. |", False),
+])
+def test_what_counts_as_a_changed_sentence(monkeypatch, old, new, changed):
+    from core import plagiarism_report as pr
+
+    monkeypatch.setattr(pr, "_checked_text", lambda art, result: (1, "# Guide\n\n" + old))
+    s = pr.since_check(None, {"text_sha": "x", "uniqueness": 99}, "# Guide\n\n" + new)
+    assert bool(s["new_words"]) is changed and bool(s["gone_words"]) is changed, s

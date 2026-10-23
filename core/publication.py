@@ -131,11 +131,20 @@ def send_options(pub: dict | None) -> list[tuple[str, str]]:
     return [("draft", f"Update the draft #{pid}"), ("publish", f"Publish draft #{pid} on the blog")]
 
 
+# the share of the text changed since a good uniqueness check under which the row stays clear: a
+# rule of thumb the operator chose over a proof (2026-10-23), the numbers shown beside it
+RECHECK_CHANGED = 5
+
+
+def _share(pct: float) -> str:
+    return "under 1%" if pct < 1 else f"{round(pct)}%"
+
+
 def _uniqueness_since(art: store.Article, uniq: dict, md: str) -> tuple[str, str]:
-    """The uniqueness row for a result of an earlier version: what that version scored, how much
-    of the text is new or rewritten since, and whether that much new text could bring it under
-    the warn line (plagiarism_report.since_check)."""
-    from .plagiarism_report import DEFAULTS, since_check
+    """The uniqueness row for a result of an earlier version: what that version scored and how
+    much of the text changed since (plagiarism_report.since_check); clear while under
+    RECHECK_CHANGED % is new and under that much of the checked text is gone, else check again."""
+    from .plagiarism_report import since_check
 
     if uniq.get("uniqueness") is None:
         return "check_again", "the check of an earlier version gave no result"
@@ -145,19 +154,18 @@ def _uniqueness_since(art: store.Article, uniq: dict, md: str) -> tuple[str, str
     what = f"v{s['n']}" if s.get("n") else "An earlier text"
     if s.get("empty"):
         return "check_again", f"{what} was checked; the text now has no prose to compare with it"
-    warn = int((uniq.get("thresholds") or {}).get("warn_below") or DEFAULTS["warn_below"])
-    head = f"{what} was checked: {uniq.get('uniqueness')}% unique."
-    # "no sentence" only when none is; a share under 1% is said as such (Codex R9D2-03)
-    since = ("No sentence is new since" if not s["new_words"] else
-             "Under 1% of the text is new since" if s["new"] < 1 else f"{round(s['new'])}% of the text is new since")
+    head = f"{what} was checked: {uniq.get('uniqueness')}% unique"
     if uniq.get("verdict") in ("warn", "fail"):
-        return "found", f"{what} was checked: {uniq.get('uniqueness')}% unique ({uniq['verdict']}). {since}: check it again"
-    if uniq.get("verdict") == "ok" and s.get("lowest") is not None and s["lowest"] >= warn:
-        return "clear", (f"{head} {since}" + (f"; even if all of it were copied, it stays {s['lowest']}% unique or more"
-                                              if s["new_words"] else ""))
-    if s.get("lowest") is None:
-        return "check_again", f"{head} {since}: the Studio cannot tell how far that can move the result"
-    return "check_again", f"{head} {since}: if it were copied, the text could fall under {warn}% unique"
+        head += f" ({uniq['verdict']})"
+    new, gone = f"{_share(s['new'])} of the text is new", f"{_share(s['gone'])} of the checked text is gone"
+    since = (f"{new} and {gone} since" if s["new_words"] and s["gone_words"] else f"{new} since" if s["new_words"]
+             else f"No sentence is new since; {gone}" if s["gone_words"] else "No sentence is new since")
+    since = since[0].upper() + since[1:]
+    if uniq.get("verdict") in ("warn", "fail"):
+        return "found", f"{head}. {since}"
+    if uniq.get("verdict") == "ok" and s["new"] < RECHECK_CHANGED and s["gone"] < RECHECK_CHANGED:
+        return "clear", f"{head}. {since}"
+    return "check_again", f"{head}. {since}"
 
 
 def pre_send_checks(art: store.Article) -> list[dict]:

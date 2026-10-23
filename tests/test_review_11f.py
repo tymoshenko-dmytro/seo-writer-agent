@@ -50,7 +50,9 @@ def test_r11f_01_bound_uses_the_providers_units(studio, output_dir, monkeypatch,
     # The same responder through the real check establishes the allowed counterexample.
     rescanned = provider_scan(studio, art, monkeypatch, response)
     assert rescanned['uniqueness'] < 90
-    assert current['state'] == 'check_again' and bound['lowest'] <= rescanned['uniqueness'], {
+    # ported (the operator, 2026-10-23: a measure, not a proof): no bound is promised; what was
+    # added is more than 5% of the text, so the row asks to check again
+    assert current['state'] == 'check_again' and 'lowest' not in bound and bound['new'] >= 5, {
         'old_provider_words': checked['total_words'], 'old_local_words': len(article_text(body).split()),
         'bound': bound, 'visible': visible, 'row': current, 'rescan': rescanned['uniqueness']}
 

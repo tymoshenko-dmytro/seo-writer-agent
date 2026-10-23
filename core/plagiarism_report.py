@@ -18,7 +18,6 @@ frontmatter are not. Sending raw Markdown would have URLs and syntax counted as 
 from __future__ import annotations
 
 import hashlib
-import math
 import re
 from collections import Counter
 from pathlib import Path
@@ -177,51 +176,27 @@ def text_sha(markdown: str) -> str:
 
 
 # ---- a result after the text moved ----------------------------------------------------
-# a word as the check may count it: the longest count splits at every non-letter and gives each
-# CJK character its own word; the shortest counts each space-separated token with a letter or a
-# digit (Codex R11F-01: the check's own units are not ours, so the bound holds for any of them
-# between, and is given only when the check's count of the checked text lies between: R8B9-01)
-_CJK = "\u3040-\u30ff\u3400-\u9fff\uac00-\ud7af\uf900-\ufaff"
-_FINE = re.compile(rf"[{_CJK}]|[^\W{_CJK}]+")
-
-
-def _signs(text: str) -> int:
-    """Tokens of signs alone ("—", "---"): a check may count each as a word."""
-    return sum(1 for w in text.split() if not re.search(r"\w", w))
-
-
-def _most_words(text: str) -> int:
-    return len(_FINE.findall(text)) + _signs(text)
-
-
-def _least_words(text: str) -> int:
-    return sum(1 for w in text.split() if re.search(r"\w", w))
-
-
-# the scripts that put spaces between words, where the two counts above bound any count of a
-# word: a text in another (Thai, Lao, Khmer, Myanmar, Tibetan...) gets no bound (Codex R8B9-01)
-_SPACED = ("LATIN", "CYRILLIC", "GREEK", "ARMENIAN", "GEORGIAN", "HEBREW", "ARABIC", "DEVANAGARI",
-           "BENGALI", "GURMUKHI", "GUJARATI", "TAMIL", "TELUGU", "KANNADA", "MALAYALAM", "HANGUL")
-
-
-def _spaced(text: str) -> bool:
-    import unicodedata
-
-    for ch in set(text):
-        if ch.isalpha() and not re.match(rf"[{_CJK}]", ch):
-            if not unicodedata.name(ch, "").startswith(_SPACED):
-                return False
-    return True
-
-
 def _units(markdown: str) -> list[str]:
-    """The text's sentences as a reader sees them: the title, each heading, each sentence of a
-    paragraph with its soft line breaks joined, each list item and table cell (keyword_report's
-    units, on the prose the check reads: Codex R11F-02); a quote's lines are one paragraph, as the
-    page's parser reads them (R8B9-02)."""
-    z = split_zones(re.sub(r"^[ \t]*(?:>[ \t]?)+", "", markdown or "", flags=re.M))
-    raw = [z["h1"]] + [t for _, t in z["headings"]] + list(z["body_units"])
-    return [t for t in (" ".join(str(x).split()) for x in raw) if t]
+    """The sentences of the prose the check reads: the title, each heading and each paragraph
+    apart, a paragraph's lines joined (a soft line break or a quote's next line is no new
+    sentence), a table's row on its own (its pipes leave it spaces at both ends), split after a
+    sentence's end. A measure of how much changed, not a parse."""
+    out: list[str] = []
+
+    def add(text: str) -> None:
+        out.extend(t for t in re.split(r"(?<=[.!?])\s+", " ".join(text.split())) if t)
+
+    for chunk in re.split(r"\n[ \t]*\n", article_text(markdown)):
+        lines: list[str] = []
+        for line in chunk.split("\n"):
+            if line.strip() and line[:1] in " \t" and line[-1:] in " \t":       # a table row
+                add(" ".join(lines))
+                lines = []
+                add(line)
+            else:
+                lines.append(line)
+        add(" ".join(lines))
+    return out
 
 
 def _checked_text(art, result: dict) -> tuple[int | None, str] | None:
@@ -249,47 +224,36 @@ def _checked_text(art, result: dict) -> tuple[int | None, str] | None:
 
 
 def since_check(art, result: dict, markdown: str) -> dict | None:
-    """What changed since the check behind `result`, for a text that moved after it (operator,
-    2026-10-23: "not checked" after every edit alarmed people): {"n": the version it read (None
-    for a draft the result kept), "new_words" and "new" (their share, in %): the words of the
-    prose now that the checked text does not hold (a sentence it does not have word for word, or
-    one more copy of a sentence than it had: Codex R9D2-01), "lowest": the lowest uniqueness the
-    prose now can have, were every new word found elsewhere and every match the check found
-    still in place}; {"n", "empty": True} when the text now has no prose to compare (R11F-04).
-    None when the text it read cannot be found. The new words are counted at their most and the
-    kept ones at their least, so the bound holds whatever the check calls a word (R11F-01)."""
+    """How much the text moved since the check behind `result` (operator, 2026-10-23: "not
+    checked" after every edit alarmed people): {"n": the version it read (None for a draft the
+    result kept), "new_words" and "new": the words of the prose now in sentences the checked text
+    does not have (one more copy of a sentence counts too) and their share of the text now;
+    "gone_words" and "gone": the words of the checked text in sentences the text no longer has and
+    their share of the checked text}. A share is of the letters and signs, not the words, so a
+    script that does not space its words counts in full. {"n", "empty": True} when the text now
+    has no prose; None when the text it read cannot be found. The operator chose a measure over
+    a proof (2026-10-23): a bound on the check's own number cannot be had without the check."""
     got = _checked_text(art, result)
-    if got is None or result.get("uniqueness") is None:
+    if got is None:
         return None
     n, checked = got
     old, now = _units(checked), _units(markdown)
+    size = lambda t: len(t.replace(" ", ""))                                   # noqa: E731
     left = Counter(t.lower() for t in old)
-    kept = new = 0
+    new_words = new = 0
     for t in now:
         if left[t.lower()] > 0:
             left[t.lower()] -= 1
-            kept += _least_words(t)
         else:
-            new += _most_words(t)
-    if not kept + new:
+            new_words, new = new_words + len(t.split()), new + size(t)
+    total, old_total = sum(map(size, now)), sum(map(size, old))
+    if not total:
         return {"n": n, "empty": True}
-    # the prose the check reads holds signs the sentences leave out (a table's "---"): the ones
-    # the text gained count as new words
-    old_prose, now_prose = article_text(checked), article_text(markdown)
-    new += max(0, _signs(now_prose) - _signs(old_prose))
-    # a bound only where our counts bound the check's own: every word in a spaced script, and the
-    # check's count of the prose it read between ours (Codex R8B9-01); else no promise
-    tw = result.get("total_words")
-    if not _spaced(old_prose + now_prose) or (
-            isinstance(tw, (int, float)) and not _least_words(old_prose) <= tw <= _most_words(old_prose)):
-        return {"n": n, "new_words": new, "new": 100 * new / (kept + new)}
-    # the matches the check found, in its own words when it kept the count, else from its
-    # percentage at the safe end of its rounding, over the most words the old text can have
-    pw = result.get("plagiarised_words")
-    matched = (float(pw) if isinstance(pw, (int, float)) and pw >= 0 else
-               math.ceil((100 - float(result["uniqueness"]) + 0.005) / 100 * sum(_most_words(t) for t in old)))
-    lowest = 100 * (1 - (min(kept, matched) + new) / (kept + new))
-    return {"n": n, "new_words": new, "new": 100 * new / (kept + new), "lowest": max(0, math.floor(lowest))}
+    by_key = {t.lower(): t for t in old}
+    gone_words = sum(len(by_key[t].split()) * k for t, k in left.items() if k > 0)
+    gone = sum(size(by_key[t]) * k for t, k in left.items() if k > 0)
+    return {"n": n, "new_words": new_words, "new": 100 * new / total,
+            "gone_words": gone_words, "gone": 100 * gone / old_total if old_total else 0.0}
 
 
 def bind_version(art, n: int) -> None:

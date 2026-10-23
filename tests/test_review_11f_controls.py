@@ -4,9 +4,11 @@ import pytest
 from review_9d2_support import article, edit, scan, row, publish_row, cli_json, raw_answer
 
 
-@pytest.mark.parametrize('keep_words,expected,ceiling', [(19, 'check_again', 89), (20, 'clear', 90), (21, 'clear', 90)])
+# ported (the operator, 2026-10-23: a measure, not a proof): no bound is promised. Keeping 19-21
+# of 4,445 words leaves nearly all the checked text gone, so the row asks to check again
+@pytest.mark.parametrize('keep_words', [19, 20, 21])
 @pytest.mark.parametrize('legacy', [False, True])
-def test_rounded_counts_and_exact_warn_boundary(studio, output_dir, monkeypatch, keep_words, expected, ceiling, legacy):
+def test_rounded_counts_and_exact_warn_boundary(studio, output_dir, monkeypatch, keep_words, legacy):
     from core import store
     from core.plagiarism_report import since_check
     kept = ' '.join(f'kept{i}' for i in range(keep_words)) + '.'
@@ -20,14 +22,8 @@ def test_rounded_counts_and_exact_warn_boundary(studio, output_dir, monkeypatch,
         store.write_json(art.path('_plagiarism.json'), checked)
     edit(studio, art, kept)
     bound = since_check(art, checked, art.text())
-    assert bound['lowest'] <= math.floor(100 * (keep_words - 2) / keep_words)
-    if legacy:
-        # With only the rounded percentage a lower, cautious bound is allowed.
-        if keep_words == 19:
-            assert row(art)['state'] == 'check_again'
-    else:
-        assert bound['lowest'] == ceiling
-        assert row(art)['state'] == expected, row(art)
+    assert 'lowest' not in bound and bound['gone'] > 99 and bound['new_words'] == 0
+    assert row(art)['state'] == 'check_again', row(art)
 
 
 @pytest.mark.parametrize('copies', [1, 2, 10])
@@ -41,11 +37,11 @@ def test_multiplicity_budget_is_conservative(studio, output_dir, monkeypatch, co
     extra = ['A fresh sentence adds new useful information about widgets today.'] if fresh else []
     edit(studio, art, '\n\n'.join(list(reversed(originals)) + [copied] * copies + extra))
     bound = since_check(art, checked, art.text())
-    denominator = 190 + 10 * copies + 10 * fresh
-    exact = 100 * 190 / denominator
-    assert bound['lowest'] <= exact
+    # ported (the operator, 2026-10-23: a measure, not a proof): each copy beyond the checked one
+    # counts as new, and the row follows the 5% rule
     assert bound['new_words'] == 10 * (copies - 1 + fresh)
-    assert row(art)['state'] == ('clear' if exact >= 90 else 'check_again')
+    assert row(art)['state'] == ('clear' if bound['new'] < 5 and bound['gone'] < 5 else 'check_again')
+    assert row(art)['state'] == ('check_again' if copies == 10 else row(art)['state'])
 
 
 @pytest.mark.parametrize('change', ['tiny', 'delete'])
@@ -60,7 +56,8 @@ def test_nonzero_share_and_exact_zero_are_distinct(studio, output_dir, monkeypat
     assert row(art)['state'] == 'clear'
     text = publish_row(studio, art)
     if change == 'tiny':
-        assert s['new'] == pytest.approx(0.4) and 'Under 1%' in text and 'No sentence is new' not in text
+        # ported (2026-10-23): the share is of letters now, not words; still under 1%
+        assert 0 < s['new'] < 1 and 'Under 1%' in text and 'No sentence is new' not in text
     else:
         assert s['new_words'] == 0 and 'No sentence is new' in text
 

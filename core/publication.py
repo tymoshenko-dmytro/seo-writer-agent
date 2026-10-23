@@ -144,12 +144,14 @@ def _uniqueness_since(art: store.Article, uniq: dict, md: str) -> tuple[str, str
         return "check_again", "an earlier version was checked, and the Studio no longer keeps it to compare"
     warn = int((uniq.get("thresholds") or {}).get("warn_below") or DEFAULTS["warn_below"])
     head = f"v{s['n']} was checked: {uniq.get('uniqueness')}% unique."
-    since = f"{s['new']}% of the text is new since" if s["new"] else "No sentence is new since"
+    # "no sentence" only when none is; a share under 1% is said as such (Codex R9D2-03)
+    since = ("No sentence is new since" if not s["new_words"] else
+             "Under 1% of the text is new since" if s["new"] < 1 else f"{round(s['new'])}% of the text is new since")
     if uniq.get("verdict") in ("warn", "fail"):
         return "found", f"v{s['n']} was checked: {uniq.get('uniqueness')}% unique ({uniq['verdict']}). {since}: check it again"
     if uniq.get("verdict") == "ok" and s["lowest"] >= warn:
         return "clear", (f"{head} {since}" + (f"; even if all of it were copied, it stays {s['lowest']}% unique or more"
-                                              if s["new"] else ""))
+                                              if s["new_words"] else ""))
     return "check_again", f"{head} {since}: if it were copied, the text could fall under {warn}% unique"
 
 

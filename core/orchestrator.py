@@ -465,8 +465,13 @@ def first_review(art: store.Article, config: dict, project: Project, status_call
     from . import versions
     from .qa_review import review
 
-    versions.record(art, "the pipeline", "Article written", "keywords, brief, research, writing, pictures",
-                    kind="pipeline")
+    rec = versions.record(art, "the pipeline", "Article written", "keywords, brief, research, writing, pictures",
+                          kind="pipeline")
+    if rec:
+        # the uniqueness check read this text before it was a version (Codex R9D2-04)
+        from .plagiarism_report import bind_version
+
+        bind_version(art, rec["n"])
     if status_callback:
         status_callback("Review")
     try:

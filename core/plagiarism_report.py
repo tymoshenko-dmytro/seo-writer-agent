@@ -18,7 +18,9 @@ frontmatter are not. Sending raw Markdown would have URLs and syntax counted as 
 from __future__ import annotations
 
 import hashlib
+import math
 import re
+from collections import Counter
 from pathlib import Path
 
 from .keyword_report import split_zones
@@ -202,27 +204,55 @@ def _checked_text(art, result: dict) -> tuple[int | None, str] | None:
     return None
 
 
+def _matched_before(result: dict, old_words: int) -> float:
+    """The most words of the checked text the check can have matched, in this module's words: its
+    own counts when it kept them (the larger of its count and its share of our count), else its
+    percentage at the safe end of the rounding it was shown with (Codex R9D2-02)."""
+    tw, pw = result.get("total_words"), result.get("plagiarised_words")
+    if isinstance(tw, (int, float)) and tw > 0 and isinstance(pw, (int, float)) and pw >= 0:
+        return max(float(pw), math.ceil(pw * old_words / tw))
+    return math.ceil((100 - float(result["uniqueness"]) + 0.005) / 100 * old_words)
+
+
 def since_check(art, result: dict, markdown: str) -> dict | None:
     """What changed since the check behind `result`, for a text that moved after it (operator,
     2026-10-23: "not checked" after every edit alarmed people): {"n": the version it read,
-    "new": the share of the prose now that is new or rewritten (a sentence the checked text does
-    not have word for word), "lowest": the lowest uniqueness the prose now can have, were every
+    "new_words" and "new" (their share, in %): the words of the prose now that the checked text
+    does not hold (a sentence it does not have word for word, or one more copy of a sentence than
+    it had: Codex R9D2-01), "lowest": the lowest uniqueness the prose now can have, were every
     new word found elsewhere and every match the check found still in place}. None when the text
     it read is not among the kept versions."""
     got = _checked_text(art, result)
-    u = result.get("uniqueness")
-    if got is None or u is None:
+    if got is None or result.get("uniqueness") is None:
         return None
     n, checked = got
     old, now = _sentences(article_text(checked)), _sentences(article_text(markdown))
-    seen = {t.lower() for t in old}
-    total = sum(len(t.split()) for t in now)
-    kept = sum(len(t.split()) for t in now if t.lower() in seen)
+    left = Counter(t.lower() for t in old)
+    total = kept = 0
+    for t in now:
+        w = len(t.split())
+        total += w
+        if left[t.lower()] > 0:
+            left[t.lower()] -= 1
+            kept += w
     if not total:
         return None
-    matched_before = (100 - float(u)) / 100 * sum(len(t.split()) for t in old)
-    lowest = 100 * (1 - (min(kept, matched_before) + (total - kept)) / total)
-    return {"n": n, "new": round(100 * (total - kept) / total), "lowest": max(0, int(lowest))}
+    new = total - kept
+    matched = _matched_before(result, sum(len(t.split()) for t in old))
+    lowest = 100 * (1 - (min(kept, matched) + new) / total)
+    return {"n": n, "new_words": new, "new": 100 * new / total, "lowest": max(0, math.floor(lowest))}
+
+
+def bind_version(art, n: int) -> None:
+    """The result of a check made before its text was a version (the pipeline checks the finished
+    text, then keeps it as the first version): version `n` is the text it read, when the prose is
+    the same (Codex R9D2-04)."""
+    from .store import read_json_lenient, write_json
+
+    p = art.path("_plagiarism.json")
+    data = read_json_lenient(p, {}) or {}
+    if data and data.get("version_n") is None and data.get("text_sha") == text_sha(art.text()):
+        write_json(p, {**data, "version_n": n})
 
 
 def write_report(article_dir, data: dict, topic: str = "") -> None:

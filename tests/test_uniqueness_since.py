@@ -3,6 +3,8 @@ people. The row says which version was checked, how much of the text is new or r
 and whether that much could bring it under the warn line; the check runs again from the row."""
 from __future__ import annotations
 
+import math
+
 import pytest
 
 SENTENCES = [f"Sentence number {i} explains one more detail about widgets and teams." for i in range(1, 41)]
@@ -54,9 +56,10 @@ def test_the_lowest_uniqueness_bound(monkeypatch):
     s = pr.since_check(None, {"text_sha": "x", "uniqueness": 96}, new)
     total = sum(len(t.split()) for t in pr._sentences(pr.article_text(new)))
     new_words = 2 * len("A brand new sentence about widgets and their teams today.".split())
-    matched = 0.04 * sum(len(t.split()) for t in pr._sentences(pr.article_text(old)))
-    assert s["n"] == 1 and s["new"] == round(100 * new_words / total)
-    assert s["lowest"] == int(100 * (1 - (matched + new_words) / total))
+    # 96% shown with two decimals: at most 4.005% of the checked words matched, rounded up
+    matched = math.ceil(0.04005 * sum(len(t.split()) for t in pr._sentences(pr.article_text(old))))
+    assert s["n"] == 1 and s["new_words"] == new_words and s["new"] == pytest.approx(100 * new_words / total)
+    assert s["lowest"] == math.floor(100 * (1 - (matched + new_words) / total))
 
 
 def test_a_small_edit_after_a_good_check_stays_clear(output_dir):

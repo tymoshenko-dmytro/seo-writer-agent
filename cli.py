@@ -883,6 +883,10 @@ def main():
         try:
             with art.lock(holder="uniqueness check (CLI)"), usage.recording(d, "uniqueness", config=cfg), \
                     usage.stage("uniqueness"):
+                if not args.dry_run:
+                    from core import versions
+
+                    versions.ensure(art)        # the text it reads is a version it can name (R9D2-04)
                 data = build(d, project.seo, dry_run=args.dry_run)
         except PlagiarismError as e:
             if args.json:

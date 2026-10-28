@@ -1,22 +1,51 @@
-# SEO Writer Agent
+# SEO Writer Agent: an open-source AI agent that writes SEO articles for WordPress
 
-An open-source AI SEO agent and blog writer for WordPress: keyword research, fact-checked articles
-with their sources, charts and a cover, a review by three AI models, then a WordPress draft.
-Self-hosted with your own keys; runs from its web interface or from Claude Code and Codex.
+[![Release](https://img.shields.io/github/v/release/tymoshenko-dmytro/seo-writer-agent)](https://github.com/tymoshenko-dmytro/seo-writer-agent/releases)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
+[![Self-hosted: Docker](https://img.shields.io/badge/self--hosted-Docker-2496ED)](#quickstart)
+[![Runs from Claude Code or Codex](https://img.shields.io/badge/Claude_Code_·_Codex-CLI-D97757)](AGENTS.md)
 
-[![SEO Writer Agent in 52 seconds: play the video](docs/promo.jpg)](docs/promo.mp4)
+[![SEO Writer Agent in 52 seconds: play the video](docs/promo.png)](https://github.com/tymoshenko-dmytro/seo-writer-agent/releases/tag/v1.0.0)
 
-You give it a topic. It finds the keyword to target and measures the pages that rank for it
-(Ahrefs), plans the article from what those pages cover, gathers facts with their sources
-(Parallel), writes the article in your brand's voice about your product, draws its charts and
-infographics, takes screenshots of the pages it discusses, and makes a cover. Then a panel of
-models reviews it once: the safe changes are made by the machine, each one a version you can undo,
-and the rest is listed for you to decide. Nothing goes to WordPress until you send it.
+One blog article usually needs five people: an SEO specialist, a copywriter, a designer, an editor
+and someone to publish it. SEO Writer Agent does the work of all five. Give it a topic, and you get
+a researched article with its sources, charts and a cover, reviewed by three AI models and waiting
+as a draft in your WordPress. Every fact it states has a source, every change it makes can be
+undone, and nothing is published until you send it.
+
+One real run: a 3,400-word article with 12 pictures, written and reviewed in 30 minutes for $3.85
+in AI and research calls (plus your Ahrefs and Winston plan units). See
+[what an article costs](#what-an-article-costs).
+
+Built by [Dmytro Tymoshenko](https://www.linkedin.com/in/tymoshenko-dmytro), Head of Growth at
+Palabra.ai, where it writes the company blog.
+
+## The five roles in one run
+
+| Role | What it does | Works with |
+|---|---|---|
+| **SEO specialist** | Picks the keyword from real search data, opens and measures the pages that rank, and plans the length and structure from them. Writes the meta title, description and FAQ for Yoast, adds internal links from your sitemap, and reports the keyword coverage | Ahrefs, Scrapfly |
+| **Copywriter** | Gathers the facts and the page each one comes from, and writes in your brand voice. About your product it says only what your product facts say, and it follows your editorial rules | Parallel, Claude |
+| **Designer** | Draws charts from the researched numbers, makes infographics and a cover with your logo, and takes screenshots of the products the article discusses, opened from your target country | OpenAI, Scrapfly |
+| **Editor** | Three AI models from two vendors review the draft, and each picture is checked against its caption. Safe fixes are made for you, each one a version you can undo; a change to a fact waits for your decision. A uniqueness check runs before you publish | Claude, OpenAI, Winston AI |
+| **Publisher** | Sends a draft or a live post to WordPress with its Yoast fields, only when a person sends it | WordPress |
 
 ![The sample article's review: two changes the machine made, two that wait for a person](docs/screenshot.png)
 
-It knows nothing about any product until you tell it: a new install starts empty, and the setup
-asks for your project's name, site, brand voice, product facts and your own editorial rules.
+## Why use it instead of an AI writing tool
+
+- **Facts you can check.** Each claim about a third party links to its source. If the research does
+  not find a fact, the article does not state it.
+- **You keep the final say.** The machine makes only the safe fixes. Facts, removed pictures and new
+  sections wait for you, and WordPress gets the post only when you send it.
+- **Your server, your keys, your data.** It runs in Docker on your machine. There is no account
+  with us and no telemetry; you pay the AI and data providers directly, and see the cost of each
+  article, step and service.
+- **Any business.** A new install knows nothing about any product. The setup asks for your
+  project's name, site, brand voice, product facts and editorial rules.
+- **Your coding agent can run it.** Every action in the web interface is also a command with JSON
+  output, and [`AGENTS.md`](AGENTS.md) tells Claude Code or Codex how to install and operate it and
+  which steps cost money.
 
 ## Quickstart
 

@@ -5,7 +5,11 @@
 [![Self-hosted: Docker](https://img.shields.io/badge/self--hosted-Docker-2496ED)](#quickstart)
 [![Runs from Claude Code or Codex](https://img.shields.io/badge/Claude_Code_·_Codex-CLI-D97757)](AGENTS.md)
 
-**[▶ Watch the 52-second video](https://github.com/tymoshenko-dmytro/seo-writer-agent/releases/tag/v1.0.0)**
+
+
+https://github.com/user-attachments/assets/c43c081c-b7ee-43e3-85e0-cdc5bcd3e58e
+
+
 
 *From a topic to a reviewed WordPress article in 52 seconds: the five roles, the review you
 control, and how to run it. Sound on.*

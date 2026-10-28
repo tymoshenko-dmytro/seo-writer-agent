@@ -33,75 +33,14 @@ Palabra.ai, where it writes the company blog.
 
 ## How an article is made
 
-```mermaid
-flowchart LR
-    T([Your topic]) --> K
+![How an article is made: your topic goes through the SEO specialist, copywriter, designer and editor; safe fixes are made, fact changes wait for you; you accept and send it to WordPress](docs/how-it-works.png)
 
-    subgraph SEO["SEO specialist"]
-        K["Keyword research<br/>the keyword, the pages that rank"] --> B["Brief<br/>outline, sections, questions"]
-    end
-    subgraph COPY["Copywriter"]
-        R["Deep research<br/>facts with their sources"] --> W["Writing<br/>your brand voice, every fact cited"]
-    end
-    subgraph DES["Designer"]
-        P["Pictures<br/>charts, infographics,<br/>screenshots, cover"]
-    end
-    subgraph ED["Editor"]
-        U["Keyword report and<br/>uniqueness check"] --> Q["Review by three AI models<br/>and a check of every picture"]
-        Q --> S["Safe fixes made,<br/>each a version you can undo"]
-        Q --> Y{{"Changes to facts<br/>wait for you"}}
-    end
-    subgraph PUB["Publisher"]
-        WP(["WordPress<br/>draft or live post"])
-    end
-
-    B --> R
-    W --> P --> U
-    S --> A{{"You accept<br/>and send"}}
-    Y --> A
-    A --> WP
-```
-
-The steps run one after another in a single run; a run takes from several minutes to over an hour,
-most of it in the deep research. The review runs once, not in a loop, and you can run it again
-after your edits. More in [`docs/architecture.md`](docs/architecture.md).
+A run takes from several minutes to over an hour, most of it in the deep research. You can run
+the review again after your edits. The steps in detail: [`docs/architecture.md`](docs/architecture.md).
 
 ## What runs where
 
-```mermaid
-flowchart TB
-    subgraph YOU["You"]
-        BR["Browser"]
-        CC["Claude Code or Codex"]
-    end
-
-    subgraph BOX["Your server: one Docker container"]
-        UI["Web interface<br/>(Flask, port 5050)"]
-        CLI["cli.py<br/>every action, JSON output"]
-        ENG["Engine<br/>a LangGraph run of the agents,<br/>the review, versions, the cost ledger"]
-        DATA[("Data volume<br/>articles, pictures, versions,<br/>settings, keys, costs")]
-        UI --> ENG
-        CLI --> ENG
-        ENG <--> DATA
-    end
-
-    subgraph EXT["Services, with your own keys"]
-        AN["Anthropic"]
-        OA["OpenAI"]
-        PA["Parallel"]
-        AH["Ahrefs"]
-        SC["Scrapfly"]
-        WI["Winston AI"]
-        WPS["Your WordPress"]
-    end
-
-    BR --> UI
-    CC --> CLI
-    ENG --> AN & OA & PA & AH & SC & WI & WPS
-```
-
-Besides these, it opens only the web pages that the research and the article name. There is no
-account with us and no telemetry.
+![What runs where: your browser or Claude Code and Codex reach one Docker container on your server, which calls Anthropic, OpenAI, Parallel, Ahrefs, Scrapfly, Winston AI and your WordPress with your keys](docs/architecture.png)
 
 ## Why use this AI writing tool
 

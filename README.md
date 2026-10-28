@@ -1,9 +1,10 @@
 # SEO Writer Agent
 
-Open-source, self-hosted AI SEO agent that researches, writes, reviews and publishes blog articles
-to WordPress; runs from its web interface or from Claude Code and Codex.
+An open-source AI SEO agent and blog writer for WordPress: keyword research, fact-checked articles
+with their sources, charts and a cover, a review by three AI models, then a WordPress draft.
+Self-hosted with your own keys; runs from its web interface or from Claude Code and Codex.
 
-![The sample article's review: two changes the machine made, two that wait for a person](docs/screenshot.png)
+[![SEO Writer Agent in 52 seconds: play the video](docs/promo.jpg)](docs/promo.mp4)
 
 You give it a topic. It finds the keyword to target and measures the pages that rank for it
 (Ahrefs), plans the article from what those pages cover, gathers facts with their sources
@@ -11,6 +12,8 @@ You give it a topic. It finds the keyword to target and measures the pages that 
 infographics, takes screenshots of the pages it discusses, and makes a cover. Then a panel of
 models reviews it once: the safe changes are made by the machine, each one a version you can undo,
 and the rest is listed for you to decide. Nothing goes to WordPress until you send it.
+
+![The sample article's review: two changes the machine made, two that wait for a person](docs/screenshot.png)
 
 It knows nothing about any product until you tell it: a new install starts empty, and the setup
 asks for your project's name, site, brand voice, product facts and your own editorial rules.

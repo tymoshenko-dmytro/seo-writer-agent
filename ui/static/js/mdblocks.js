@@ -90,7 +90,7 @@
   // One block of Markdown (a token of marked's lexer) as the editor's nodes: what the editor cannot
   // hold as it is (a table, HTML, a quote, a link definition) is a raw block of its Markdown
   function blockNodes(editor, t, defs) {
-    if (!RAW_TYPES.has(t.type)) {
+    if (!RAW_TYPES.has(t.type) && !nestedRaw(t)) {
       // the block's own text, without the blank lines after it (they are kept with the block's
       // bytes, and read alone they would be empty paragraphs)
       const own = t.raw.replace(/\n+$/, '');
@@ -98,6 +98,13 @@
       if (nodes.length && valid(editor, nodes)) return nodes;
     }
     return [{ type: 'rawBlock', attrs: { md: t.raw } }];
+  }
+
+  // a table or HTML inside a list: the editor's parser drops it and keeps the rest valid, so the
+  // whole block stays raw instead (review R4EC-04)
+  function nestedRaw(t) {
+    const inner = (t.tokens || []).concat(...(t.items || []).map((i) => i.tokens || []));
+    return inner.some((c) => c.type === 'table' || (c.type === 'html' && c.block) || nestedRaw(c));
   }
 
   // Load `md` into `editor`; returns the state `save` needs.
@@ -158,30 +165,57 @@
   // - whole blocks (or whole list items): replaced whole, the reply's blocks (or items) in their
   //   place, so a list is not nested in an emptied item and a heading stays a heading;
   // - anything else: the reply's blocks where the words were.
-  function parseReplacement(editor, md, from, to) {
+  // The reply's blocks, read with the link definitions that hold after it goes in: its own first
+  // (the first definition of a label wins), then the article's outside the range it replaces
+  // (review R4EC-02). Positions are only compared, never resolved, so a reply that came back
+  // after the article changed is still read (review R4EC-05)
+  function replyNodes(editor, md, from, to) {
     const { marked } = window.TT;
-    const doc = editor.state.doc;
-    const own = [];
-    doc.descendants((n) => { if (n.type.name === 'rawBlock' && /^ {0,3}\[[^\]]+\]:/.test(n.attrs.md)) own.push(n.attrs.md.trim()); });
     const tokens = marked.lexer(md);
-    const defs = own.concat(tokens.filter((t) => t.type === 'def').map((t) => t.raw.trim())).join('\n');
-    const nodes = tokens.filter((t) => t.type !== 'space').flatMap((t) => blockNodes(editor, t, defs));
+    const defs = tokens.filter((t) => t.type === 'def').map((t) => t.raw.trim());
+    editor.state.doc.descendants((n, pos) => {
+      if (n.type.name === 'rawBlock' && /^ {0,3}\[[^\]]+\]:/.test(n.attrs.md) && (pos + n.nodeSize <= from || pos >= to)) {
+        defs.push(n.attrs.md.trim());
+      }
+    });
+    return tokens.filter((t) => t.type !== 'space').flatMap((t) => blockNodes(editor, t, defs.join('\n')));
+  }
+
+  function parseReplacement(editor, md, from, to) {
+    const doc = editor.state.doc;
+    const nodes = replyNodes(editor, md, from, to);
     const $from = doc.resolve(from), $to = doc.resolve(to);
-    const d = $from.sharedDepth(to), parent = $from.node(d);
+    let d = $from.sharedDepth(to);
+    const parent = $from.node(d);
     const textblock = (n) => !!editor.schema.nodes[n.type] && editor.schema.nodes[n.type].isTextblock;
+    // a table, a quote or HTML is a raw block, which the Markdown is written with only at the top
+    // of the article: one that would land inside a list is refused before anything changes
+    // (review R4EC-03)
+    const place = (range, content, container) => {
+      if (container.type.name !== 'doc' && content.some((n) => n.type === 'rawBlock')) {
+        throw new Error('The rewrite has a table, a quote or HTML, which cannot go inside a list: select whole blocks, or ask for text only.');
+      }
+      return { range, content };
+    };
     if (parent.isTextblock) {
       let n = nodes.length === 1 ? nodes[0] : null;
       while (n && !textblock(n) && n.content && n.content.length === 1) n = n.content[0];
       if (n && textblock(n)) return { range: { from, to }, content: n.content || [] };
-      return { range: { from, to }, content: nodes };
+      return place({ from, to }, nodes, $from.node(d - 1));
     }
     const atStart = (l) => l > $from.depth ? true : (l === $from.depth ? $from.parentOffset === 0 : $from.index(l) === 0 && atStart(l + 1));
     const atEnd = (l) => l > $to.depth ? true : (l === $to.depth ? $to.parentOffset === $to.parent.content.size
                                                                   : $to.indexAfter(l) === $to.node(l).childCount && atEnd(l + 1));
-    if (!atStart(d + 1) || !atEnd(d + 1)) return { range: { from, to }, content: nodes };
+    if (!atStart(d + 1) || !atEnd(d + 1)) return place({ from, to }, nodes, parent);
+    // all of a list selected: the list itself is replaced, so the reply's own list type and start
+    // number hold and no emptied item is left (review R4EC-06). A list item stops the climb: all
+    // of one item is that item's blocks replaced, the list around it kept
+    const covered = (l) => $from.index(l) === 0 && $to.indexAfter(l) === $from.node(l).childCount;
+    while (d > 0 && $from.node(d).type.name !== 'listItem' && covered(d)) d -= 1;
+    const outer = $from.node(d);
     const range = { from: $from.before(d + 1), to: $to.after(d + 1) };
-    const list = nodes.length === 1 && nodes[0].type === parent.type.name && parent.type.name !== 'doc';
-    return { range, content: list ? nodes[0].content || [] : nodes };
+    const list = nodes.length === 1 && nodes[0].type === outer.type.name && outer.type.name !== 'doc';
+    return place(range, list ? nodes[0].content || [] : nodes, outer);
   }
 
   // The reply in its place. The blocks it touched are written again from what the editor holds,
@@ -194,7 +228,7 @@
     const end = range.to + (doc.content.size - size);
     const tr = editor.state.tr;
     doc.forEach((node, pos) => {
-      if (pos <= end && pos + node.nodeSize >= range.from && node.attrs.srcId) {
+      if (pos < end && pos + node.nodeSize > range.from && node.attrs.srcId) {    // touching is not touched (R4EC-01)
         tr.setNodeMarkup(pos, undefined, { ...node.attrs, srcId: null });
       }
     });
@@ -231,5 +265,5 @@
     return state.lead + parts.join('');
   }
 
-  window.MdBlocks = { extensions, load, save, selectionMarkdown, parseReplacement, applyReplacement, RAW_TYPES };
+  window.MdBlocks = { extensions, load, save, selectionMarkdown, replyNodes, parseReplacement, applyReplacement, RAW_TYPES };
 })();

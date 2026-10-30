@@ -383,7 +383,8 @@
         const res = await job('/api/ai-edit', { slug, instruction, selection: markdown, before, after },
                               step => working(`${step}…`));
         const reply = String(res.replacement || '').trim();
-        const replacement = window.MdBlocks.parseReplacement(editor, reply, from, to).content;
+        // read without resolving the old positions: the article may have changed while it ran (R4EC-05)
+        const replacement = window.MdBlocks.replyNodes(editor, reply, from, to);
         if (!reply || !replacement.length) throw new Error('The rewrite came back empty.');
         askResult.hidden = false;
         askResult.innerHTML = '<div class="change-text"><del class="diff-del"></del> <ins class="diff-ins"></ins></div>';
@@ -401,7 +402,9 @@
               if (i >= 0) at = { from: pos + i, to: pos + i + selection.length };
             });
             if (!at) { failed(new Error('The words it rewrote are not in the article any more.'), run); return; }
-            window.MdBlocks.applyReplacement(editor, window.MdBlocks.parseReplacement(editor, reply, at.from, at.to));
+            try {
+              window.MdBlocks.applyReplacement(editor, window.MdBlocks.parseReplacement(editor, reply, at.from, at.to));
+            } catch (err) { failed(err, run); return; }
             closeAsk();
           }),
           button('Discard', 'link', closeAsk),

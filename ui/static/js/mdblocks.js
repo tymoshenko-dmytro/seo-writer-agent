@@ -150,9 +150,13 @@
   // text: such a list gets a blank line before it (review RE22-04). Code fences are left alone
   function separateLists(md) {
     const out = [];
-    let fence = false;
+    let fence = null;            // the open fence's character and length, as CommonMark closes it (R1D6-01)
     for (const line of md.split('\n')) {
-      if (/^\s*(```|~~~)/.test(line)) fence = !fence;
+      const f = line.match(/^(\s*)(`{3,}|~{3,})(.*)$/);
+      if (!fence && f && !(f[2][0] === '`' && f[3].includes('`'))) fence = { ind: f[1].length, ch: f[2][0], n: f[2].length };
+      else if (fence && f && f[1].length - fence.ind <= 3 && f[2][0] === fence.ch && f[2].length >= fence.n && !f[3].trim()) {
+        fence = null; out.push(line); continue;
+      }
       const prev = out[out.length - 1];
       const m = !fence && line.match(/^(\s*)(\d+)[.)]\s/);
       // a sibling item (a list marker at the same indentation) is not a paragraph to interrupt
@@ -192,8 +196,11 @@
     const tokens = marked.lexer(md);
     // all the reply's definitions, one inside a list or a quote too: marked gathers them, and a
     // link in another block of the reply uses them (review RE22-02)
+    // marked has already read their escapes: written back escaped, so the second reading gives
+    // the same address and title, a backslash in them too (review R1D6-02)
+    const esc = (v, chars) => v.replace(chars, '\\$&');
     const defs = Object.entries(tokens.links || {}).map(([label, l]) =>
-      `[${label}]: <${l.href}>${l.title ? ` "${l.title.replace(/"/g, '\\"')}"` : ''}`);
+      `[${label}]: <${esc(l.href, /[\\<>]/g)}>${l.title ? ` "${esc(l.title, /[\\"]/g)}"` : ''}`);
     // then the article's: outside the replaced range first, then inside it, which the reply may
     // still lean on without repeating it (review RE22-02 controls)
     const outside = [], inside = [];

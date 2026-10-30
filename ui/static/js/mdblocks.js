@@ -152,15 +152,17 @@
     const out = [];
     let fence = null;            // the open fence's character and length, as CommonMark closes it (R1D6-01)
     for (const line of md.split('\n')) {
-      const f = line.match(/^(\s*)(`{3,}|~{3,})(.*)$/);
+      // Markdown's own whitespace, not JavaScript's \s: an indent is spaces (a tab is four columns,
+      // NBSP is text), and only spaces or tabs may follow a closing fence (RA4E-01)
+      const f = line.match(/^( *)(`{3,}|~{3,})(.*)$/);
       if (!fence && f && !(f[2][0] === '`' && f[3].includes('`'))) fence = { ind: f[1].length, ch: f[2][0], n: f[2].length };
-      else if (fence && f && f[1].length - fence.ind <= 3 && f[2][0] === fence.ch && f[2].length >= fence.n && !f[3].trim()) {
+      else if (fence && f && f[1].length - fence.ind <= 3 && f[2][0] === fence.ch && f[2].length >= fence.n && /^[ \t]*$/.test(f[3])) {
         fence = null; out.push(line); continue;
       }
       const prev = out[out.length - 1];
-      const m = !fence && line.match(/^(\s*)(\d+)[.)]\s/);
+      const m = !fence && line.match(/^( *)(\d+)[.)] /);
       // a sibling item (a list marker at the same indentation) is not a paragraph to interrupt
-      const sibling = (p) => { const k = p.match(/^(\s*)([-*+]|\d+[.)])\s/); return k && k[1].length === m[1].length; };
+      const sibling = (p) => { const k = p.match(/^( *)([-*+]|\d+[.)]) /); return k && k[1].length === m[1].length; };
       if (m && Number(m[2]) !== 1 && prev !== undefined && prev.trim() && !sibling(prev)) out.push('');
       out.push(line);
     }

@@ -15,6 +15,7 @@
 // Image, Markdown, marked.
 (function () {
   const RAW_TYPES = new Set(['table', 'html', 'blockquote', 'def']);
+  const RAW_IN_LIST = 'The rewrite has a table, a quote or HTML, which cannot go inside a list: select whole blocks, or ask for text only.';
   const BLOCK_TYPES = ['paragraph', 'heading', 'bulletList', 'orderedList', 'listItem', 'codeBlock',
                        'blockquote', 'horizontalRule', 'image', 'rawBlock'];
 
@@ -141,7 +142,25 @@
   function serializeNodes(editor, nodes) {
     // a raw block is its Markdown; anything else is written by the editor
     if (nodes.length === 1 && nodes[0].type === 'rawBlock') return nodes[0].attrs.md.replace(/\n+$/, '');
-    return editor.markdown.serialize({ type: 'doc', content: nodes.map(strip) }).replace(/\n+$/, '');
+    return separateLists(editor.markdown.serialize({ type: 'doc', content: nodes.map(strip) }).replace(/\n+$/, ''));
+  }
+
+  // The editor writes a nested list right under its item's first line. A numbered list that does
+  // not start at 1 cannot interrupt a paragraph (CommonMark), so the server read "3. One" there as
+  // text: such a list gets a blank line before it (review RE22-04). Code fences are left alone
+  function separateLists(md) {
+    const out = [];
+    let fence = false;
+    for (const line of md.split('\n')) {
+      if (/^\s*(```|~~~)/.test(line)) fence = !fence;
+      const prev = out[out.length - 1];
+      const m = !fence && line.match(/^(\s*)(\d+)[.)]\s/);
+      // a sibling item (a list marker at the same indentation) is not a paragraph to interrupt
+      const sibling = (p) => { const k = p.match(/^(\s*)([-*+]|\d+[.)])\s/); return k && k[1].length === m[1].length; };
+      if (m && Number(m[2]) !== 1 && prev !== undefined && prev.trim() && !sibling(prev)) out.push('');
+      out.push(line);
+    }
+    return out.join('\n');
   }
 
   // A selection as Markdown, its links' addresses and its emphasis written out: what a model
@@ -166,18 +185,24 @@
   //   place, so a list is not nested in an emptied item and a heading stays a heading;
   // - anything else: the reply's blocks where the words were.
   // The reply's blocks, read with the link definitions that hold after it goes in: its own first
-  // (the first definition of a label wins), then the article's outside the range it replaces
-  // (review R4EC-02). Positions are only compared, never resolved, so a reply that came back
+  // (the first definition of a label wins), then the article's (review R4EC-02). Positions are only compared, never resolved, so a reply that came back
   // after the article changed is still read (review R4EC-05)
   function replyNodes(editor, md, from, to) {
     const { marked } = window.TT;
     const tokens = marked.lexer(md);
-    const defs = tokens.filter((t) => t.type === 'def').map((t) => t.raw.trim());
+    // all the reply's definitions, one inside a list or a quote too: marked gathers them, and a
+    // link in another block of the reply uses them (review RE22-02)
+    const defs = Object.entries(tokens.links || {}).map(([label, l]) =>
+      `[${label}]: <${l.href}>${l.title ? ` "${l.title.replace(/"/g, '\\"')}"` : ''}`);
+    // then the article's: outside the replaced range first, then inside it, which the reply may
+    // still lean on without repeating it (review RE22-02 controls)
+    const outside = [], inside = [];
     editor.state.doc.descendants((n, pos) => {
-      if (n.type.name === 'rawBlock' && /^ {0,3}\[[^\]]+\]:/.test(n.attrs.md) && (pos + n.nodeSize <= from || pos >= to)) {
-        defs.push(n.attrs.md.trim());
+      if (n.type.name === 'rawBlock' && /^ {0,3}\[[^\]]+\]:/.test(n.attrs.md)) {
+        (pos + n.nodeSize <= from || pos >= to ? outside : inside).push(n.attrs.md.trim());
       }
     });
+    defs.push(...outside, ...inside);
     return tokens.filter((t) => t.type !== 'space').flatMap((t) => blockNodes(editor, t, defs.join('\n')));
   }
 
@@ -193,7 +218,7 @@
     // (review R4EC-03)
     const place = (range, content, container) => {
       if (container.type.name !== 'doc' && content.some((n) => n.type === 'rawBlock')) {
-        throw new Error('The rewrite has a table, a quote or HTML, which cannot go inside a list: select whole blocks, or ask for text only.');
+        throw new Error(RAW_IN_LIST);
       }
       return { range, content };
     };
@@ -208,10 +233,12 @@
                                                                   : $to.indexAfter(l) === $to.node(l).childCount && atEnd(l + 1));
     if (!atStart(d + 1) || !atEnd(d + 1)) return place({ from, to }, nodes, parent);
     // all of a list selected: the list itself is replaced, so the reply's own list type and start
-    // number hold and no emptied item is left (review R4EC-06). A list item stops the climb: all
-    // of one item is that item's blocks replaced, the list around it kept
+    // number hold and no emptied item is left (review R4EC-06). Nothing else is climbed: all of
+    // one item is that item's blocks replaced, a quote around a list is kept
     const covered = (l) => $from.index(l) === 0 && $to.indexAfter(l) === $from.node(l).childCount;
-    while (d > 0 && $from.node(d).type.name !== 'listItem' && covered(d)) d -= 1;
+    const isList = (n) => n.type.name === 'bulletList' || n.type.name === 'orderedList';
+    // only a list is climbed out of: a quote or an item around it stays (review RE22-03)
+    while (d > 0 && isList($from.node(d)) && covered(d)) d -= 1;
     const outer = $from.node(d);
     const range = { from: $from.before(d + 1), to: $to.after(d + 1) };
     const list = nodes.length === 1 && nodes[0].type === outer.type.name && outer.type.name !== 'doc';
@@ -222,10 +249,22 @@
   // not given back as their old bytes: those may name a link definition the reply dropped, or
   // read brackets the reply escaped as a link (review RDD8-04, RDD8-05)
   function applyReplacement(editor, { range, content }) {
-    const size = editor.state.doc.content.size;
+    // where the reply's nodes really land is known only after the editor fits them in: a range
+    // that starts inside a list item can put a raw block in it however the range looked. Such a
+    // change is taken back whole (the state before it, history too) and refused (review RE22-01)
+    const before = editor.state;
     editor.chain().focus().insertContentAt(range, content).run();
+    let nested = false;
+    editor.state.doc.descendants((node, pos, parent) => {
+      if (node.type.name === 'rawBlock' && parent.type.name !== 'doc') nested = true;
+      return !nested;
+    });
+    if (nested) {
+      editor.view.updateState(before);
+      throw new Error(RAW_IN_LIST);
+    }
     const doc = editor.state.doc;
-    const end = range.to + (doc.content.size - size);
+    const end = range.to + (doc.content.size - before.doc.content.size);
     const tr = editor.state.tr;
     doc.forEach((node, pos) => {
       if (pos < end && pos + node.nodeSize > range.from && node.attrs.srcId) {    // touching is not touched (R4EC-01)

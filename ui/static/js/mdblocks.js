@@ -134,6 +134,30 @@
     return editor.markdown.serialize({ type: 'doc', content: nodes.map(strip) }).replace(/\n+$/, '');
   }
 
+  // A selection as Markdown, its links' addresses and its emphasis written out: what a model
+  // rewrites, so a rewrite keeps the sources (the selection read as plain text lost every link's
+  // address; audit 2026-10-30)
+  function selectionMarkdown(editor, from, to) {
+    const doc = editor.state.doc;
+    const $from = doc.resolve(from);
+    const parent = $from.node($from.sharedDepth(to));
+    let nodes = doc.slice(from, to).content.toJSON() || [];
+    // words inside one paragraph or heading come as bare inline nodes: one block of that kind
+    if (parent.isTextblock) nodes = [{ ...parent.toJSON(), content: nodes }];
+    return nodes.map((n) => serializeNodes(editor, [n])).join('\n\n');
+  }
+
+  // A model's Markdown as the editor's content: inside one paragraph, heading or list item it goes
+  // in as that block's words (links and bold as marks, not as typed stars), so a rewrite inside a
+  // block does not split it; more than one block goes in as blocks
+  function parseReplacement(editor, md) {
+    const doc = editor.markdown.parse(md);
+    const textblock = (n) => !!editor.schema.nodes[n.type] && editor.schema.nodes[n.type].isTextblock;
+    let n = doc;
+    while (n.content && n.content.length === 1 && !textblock(n)) n = n.content[0];
+    return textblock(n) ? (n.content || []) : (doc.content || []);
+  }
+
   // The document as Markdown: unchanged blocks byte for byte, changed ones written again.
   function save(editor, state) {
     const gs = groups(editor.getJSON());
@@ -164,5 +188,5 @@
     return state.lead + parts.join('');
   }
 
-  window.MdBlocks = { extensions, load, save, RAW_TYPES };
+  window.MdBlocks = { extensions, load, save, selectionMarkdown, parseReplacement, RAW_TYPES };
 })();

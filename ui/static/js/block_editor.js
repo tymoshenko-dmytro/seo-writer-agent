@@ -367,20 +367,26 @@
   const askAI = () => {
     const { from, to } = editor.state.selection;
     const doc = editor.state.doc;
+    // the words, to find them again on Apply; the model gets them as Markdown, with their links
     const selection = doc.textBetween(from, to, '\n\n');
+    const markdown = window.MdBlocks.selectionMarkdown(editor, from, to);
     const before = doc.textBetween(Math.max(0, from - 1500), from, '\n\n');
     const after = doc.textBetween(to, Math.min(doc.content.size, to + 1500), '\n\n');
+    const words = (nodes) => nodes.map(n => (n.type === 'text' ? n.text : ` ${words(n.content || [])} `))
+      .join('').replace(/\s+/g, ' ').trim();
     const run = async () => {
       const instruction = askInput.value.trim();
       if (!instruction) { askInput.focus(); return; }
       working('Rewriting…');
       try {
-        const res = await job('/api/ai-edit', { slug, instruction, selection, before, after }, step => working(`${step}…`));
-        const text = String(res.replacement || '').trim();
+        const res = await job('/api/ai-edit', { slug, instruction, selection: markdown, before, after },
+                              step => working(`${step}…`));
+        const replacement = window.MdBlocks.parseReplacement(editor, String(res.replacement || '').trim());
+        if (!replacement.length) throw new Error('The rewrite came back empty.');
         askResult.hidden = false;
         askResult.innerHTML = '<div class="change-text"><del class="diff-del"></del> <ins class="diff-ins"></ins></div>';
         $('del', askResult).textContent = selection;
-        $('ins', askResult).textContent = text;
+        $('ins', askResult).textContent = words(replacement);
         askActions.replaceChildren(
           button('Apply', 'secondary', () => {
             // where the words are now: the person may have typed elsewhere while it ran
@@ -393,7 +399,7 @@
               if (i >= 0) at = { from: pos + i, to: pos + i + selection.length };
             });
             if (!at) { failed(new Error('The words it rewrote are not in the article any more.'), run); return; }
-            editor.chain().focus().insertContentAt(at, text).run();
+            editor.chain().focus().insertContentAt(at, replacement).run();
             closeAsk();
           }),
           button('Discard', 'link', closeAsk),
@@ -469,13 +475,15 @@
     }
     const path = node.attrs.src;
     if (!/^assets\//.test(path)) { openAsk('Redraw', '', '', '', [button('Close', 'link', closeAsk)]); failed(new Error('Only the article\'s own pictures are made again.'), closeAsk); return; }
+    // the new picture comes with its own alt text and caption, written into the saved article: the
+    // page opens again on that text, so unsaved changes are saved first
     const run = async () => {
+      if (dirty) { failed(new Error('Save your changes first: the new picture rewrites its caption in the article.'), run); return; }
       working('Making it again…');
       try {
-        await job('/api/visual-edit', { slug, path, feedback: askInput.value.trim(), alt: node.attrs.alt || '',
-                                        version: ui.dataset.version }, step => working(`${step}…`));
-        $$('img', host).forEach(img => { if (img.getAttribute('src').endsWith(path)) img.src = img.src.split('?')[0] + '?t=' + Date.now(); });
-        closeAsk();
+        await job('/api/visual-edit', { slug, path, feedback: askInput.value.trim(), version: ui.dataset.version },
+                  step => working(`${step}…`));
+        location.reload();
       } catch (err) { failed(err, run); }
     };
     openAsk(`Make ${path} again`, ui.dataset.redrawCost, 'what to change: darker background · drop the third bar', '', [

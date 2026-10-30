@@ -81,19 +81,13 @@ def visual_edit():
         return jsonify({"error": "the article changed after the page was opened: save or reload, then try again"}), 409
 
     def run(cb):
-        from core.agents.interactive import VisualProducerService
-        from core.qa_changes import Stale
+        from core.article_edits import redraw
 
         cb("regenerating")
-        with art.lock(wait=False, holder="Regenerate image"):
-            if version != art.version():
-                raise Stale("the article changed after the page was opened: save or reload, then try again")
-            with usage.recording(art.dir, "visual_edit", label=rel, config=CONFIG), usage.stage("studio"), \
-                    versions.change(art, "the Studio", "Picture redrawn", rel, kind="picture"):
-                res = VisualProducerService(project(), CONFIG).edit_visual(art.dir, rel, j.get("feedback", ""),
-                                                                          alt=j.get("alt", ""))
-        if res.get("error"):
-            raise RuntimeError(res["error"])
+        # the Pictures tab's own path: the new picture comes with its own alt text and caption, the
+        # review's word on it reaches the producer, and an open finding about it is answered (the
+        # editor's own call kept the old words under a new picture; audit 2026-10-30)
+        res = redraw(art, version, rel, CONFIG, project(), feedback=j.get("feedback", ""), who="the editor")
         res["step"] = "image regenerated"
         return res
 

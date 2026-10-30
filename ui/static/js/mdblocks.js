@@ -87,6 +87,19 @@
     return out;
   }
 
+  // One block of Markdown (a token of marked's lexer) as the editor's nodes: what the editor cannot
+  // hold as it is (a table, HTML, a quote, a link definition) is a raw block of its Markdown
+  function blockNodes(editor, t, defs) {
+    if (!RAW_TYPES.has(t.type)) {
+      // the block's own text, without the blank lines after it (they are kept with the block's
+      // bytes, and read alone they would be empty paragraphs)
+      const own = t.raw.replace(/\n+$/, '');
+      const nodes = editor.markdown.parse(defs ? `${own}\n\n${defs}\n` : `${own}\n`).content || [];
+      if (nodes.length && valid(editor, nodes)) return nodes;
+    }
+    return [{ type: 'rawBlock', attrs: { md: t.raw } }];
+  }
+
   // Load `md` into `editor`; returns the state `save` needs.
   function load(editor, md) {
     const { marked } = window.TT;
@@ -104,17 +117,7 @@
         continue;
       }
       const id = `b${blocks.length}`;
-      let nodes;
-      if (RAW_TYPES.has(t.type)) {
-        nodes = [{ type: 'rawBlock', attrs: { md: t.raw, srcId: id } }];
-      } else {
-        // the block's own text, without the blank lines after it (they are kept with the block's
-        // bytes, and read alone they would be empty paragraphs)
-        const own = t.raw.replace(/\n+$/, '');
-        const parsed = editor.markdown.parse(defs ? `${own}\n\n${defs}\n` : `${own}\n`);
-        nodes = (parsed.content || []).map((n) => ({ ...n, attrs: { ...(n.attrs || {}), srcId: id } }));
-        if (!nodes.length || !valid(editor, nodes)) nodes = [{ type: 'rawBlock', attrs: { md: t.raw, srcId: id } }];
-      }
+      const nodes = blockNodes(editor, t, defs).map((n) => ({ ...n, attrs: { ...(n.attrs || {}), srcId: id } }));
       blocks.push({ id, raw: t.raw, after: '' });
       content.push(...nodes);
     }
@@ -147,15 +150,55 @@
     return nodes.map((n) => serializeNodes(editor, [n])).join('\n\n');
   }
 
-  // A model's Markdown as the editor's content: inside one paragraph, heading or list item it goes
-  // in as that block's words (links and bold as marks, not as typed stars), so a rewrite inside a
-  // block does not split it; more than one block goes in as blocks
-  function parseReplacement(editor, md) {
-    const doc = editor.markdown.parse(md);
+  // A model's Markdown for the range it rewrote: its blocks read as the article's are (a table or a
+  // link definition stays raw Markdown, a reference link finds the article's definitions), placed
+  // by what the range was, not by what the reply looks like (review RDD8-01..03):
+  // - inside one paragraph, heading or list item: one block of reply goes in as that block's
+  //   words, so the block is not split;
+  // - whole blocks (or whole list items): replaced whole, the reply's blocks (or items) in their
+  //   place, so a list is not nested in an emptied item and a heading stays a heading;
+  // - anything else: the reply's blocks where the words were.
+  function parseReplacement(editor, md, from, to) {
+    const { marked } = window.TT;
+    const doc = editor.state.doc;
+    const own = [];
+    doc.descendants((n) => { if (n.type.name === 'rawBlock' && /^ {0,3}\[[^\]]+\]:/.test(n.attrs.md)) own.push(n.attrs.md.trim()); });
+    const tokens = marked.lexer(md);
+    const defs = own.concat(tokens.filter((t) => t.type === 'def').map((t) => t.raw.trim())).join('\n');
+    const nodes = tokens.filter((t) => t.type !== 'space').flatMap((t) => blockNodes(editor, t, defs));
+    const $from = doc.resolve(from), $to = doc.resolve(to);
+    const d = $from.sharedDepth(to), parent = $from.node(d);
     const textblock = (n) => !!editor.schema.nodes[n.type] && editor.schema.nodes[n.type].isTextblock;
-    let n = doc;
-    while (n.content && n.content.length === 1 && !textblock(n)) n = n.content[0];
-    return textblock(n) ? (n.content || []) : (doc.content || []);
+    if (parent.isTextblock) {
+      let n = nodes.length === 1 ? nodes[0] : null;
+      while (n && !textblock(n) && n.content && n.content.length === 1) n = n.content[0];
+      if (n && textblock(n)) return { range: { from, to }, content: n.content || [] };
+      return { range: { from, to }, content: nodes };
+    }
+    const atStart = (l) => l > $from.depth ? true : (l === $from.depth ? $from.parentOffset === 0 : $from.index(l) === 0 && atStart(l + 1));
+    const atEnd = (l) => l > $to.depth ? true : (l === $to.depth ? $to.parentOffset === $to.parent.content.size
+                                                                  : $to.indexAfter(l) === $to.node(l).childCount && atEnd(l + 1));
+    if (!atStart(d + 1) || !atEnd(d + 1)) return { range: { from, to }, content: nodes };
+    const range = { from: $from.before(d + 1), to: $to.after(d + 1) };
+    const list = nodes.length === 1 && nodes[0].type === parent.type.name && parent.type.name !== 'doc';
+    return { range, content: list ? nodes[0].content || [] : nodes };
+  }
+
+  // The reply in its place. The blocks it touched are written again from what the editor holds,
+  // not given back as their old bytes: those may name a link definition the reply dropped, or
+  // read brackets the reply escaped as a link (review RDD8-04, RDD8-05)
+  function applyReplacement(editor, { range, content }) {
+    const size = editor.state.doc.content.size;
+    editor.chain().focus().insertContentAt(range, content).run();
+    const doc = editor.state.doc;
+    const end = range.to + (doc.content.size - size);
+    const tr = editor.state.tr;
+    doc.forEach((node, pos) => {
+      if (pos <= end && pos + node.nodeSize >= range.from && node.attrs.srcId) {
+        tr.setNodeMarkup(pos, undefined, { ...node.attrs, srcId: null });
+      }
+    });
+    if (tr.docChanged) editor.view.dispatch(tr);
   }
 
   // The document as Markdown: unchanged blocks byte for byte, changed ones written again.
@@ -188,5 +231,5 @@
     return state.lead + parts.join('');
   }
 
-  window.MdBlocks = { extensions, load, save, selectionMarkdown, parseReplacement, RAW_TYPES };
+  window.MdBlocks = { extensions, load, save, selectionMarkdown, parseReplacement, applyReplacement, RAW_TYPES };
 })();

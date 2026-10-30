@@ -66,8 +66,8 @@ PROBE = """(src) => {
   const state = MdBlocks.load(e, src);
   const end = e.state.doc.content.size - 1;
   const sent = MdBlocks.selectionMarkdown(e, 1, end);
-  e.chain().insertContentAt({ from: 1, to: end },
-    MdBlocks.parseReplacement(e, 'Read **the source** at [this report](https://example.com/report).')).run();
+  MdBlocks.applyReplacement(e,
+    MdBlocks.parseReplacement(e, 'Read **the source** at [this report](https://example.com/report).', 1, end));
   const out = { sent, html: e.getHTML(), saved: MdBlocks.save(e, state), blocks: e.getJSON().content.length };
   e.destroy();
   return out;

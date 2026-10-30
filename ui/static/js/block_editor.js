@@ -372,7 +372,8 @@
     const markdown = window.MdBlocks.selectionMarkdown(editor, from, to);
     const before = doc.textBetween(Math.max(0, from - 1500), from, '\n\n');
     const after = doc.textBetween(to, Math.min(doc.content.size, to + 1500), '\n\n');
-    const words = (nodes) => nodes.map(n => (n.type === 'text' ? n.text : ` ${words(n.content || [])} `))
+    const words = (nodes) => nodes.map(n => (n.type === 'text' ? n.text : n.type === 'rawBlock' ? ` ${n.attrs.md} `
+                                                : ` ${words(n.content || [])} `))
       .join('').replace(/\s+/g, ' ').trim();
     const run = async () => {
       const instruction = askInput.value.trim();
@@ -381,8 +382,9 @@
       try {
         const res = await job('/api/ai-edit', { slug, instruction, selection: markdown, before, after },
                               step => working(`${step}…`));
-        const replacement = window.MdBlocks.parseReplacement(editor, String(res.replacement || '').trim());
-        if (!replacement.length) throw new Error('The rewrite came back empty.');
+        const reply = String(res.replacement || '').trim();
+        const replacement = window.MdBlocks.parseReplacement(editor, reply, from, to).content;
+        if (!reply || !replacement.length) throw new Error('The rewrite came back empty.');
         askResult.hidden = false;
         askResult.innerHTML = '<div class="change-text"><del class="diff-del"></del> <ins class="diff-ins"></ins></div>';
         $('del', askResult).textContent = selection;
@@ -399,7 +401,7 @@
               if (i >= 0) at = { from: pos + i, to: pos + i + selection.length };
             });
             if (!at) { failed(new Error('The words it rewrote are not in the article any more.'), run); return; }
-            editor.chain().focus().insertContentAt(at, replacement).run();
+            window.MdBlocks.applyReplacement(editor, window.MdBlocks.parseReplacement(editor, reply, at.from, at.to));
             closeAsk();
           }),
           button('Discard', 'link', closeAsk),
@@ -478,6 +480,8 @@
     // the new picture comes with its own alt text and caption, written into the saved article: the
     // page opens again on that text, so unsaved changes are saved first
     const run = async () => {
+      clearTimeout(pending);
+      refresh();                  // the edit typed a moment ago too, not the indicator's last look (RDD8-06)
       if (dirty) { failed(new Error('Save your changes first: the new picture rewrites its caption in the article.'), run); return; }
       working('Making it again…');
       try {
